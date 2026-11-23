@@ -8,7 +8,7 @@ local _, ns = ...
 local LEM = LibStub and LibStub("LibEditMode", true)
 local BADGE_HEIGHT = 16 -- At a 32px icon; scales with icon size and badge size.
 
-local button, icon, glow, glowAnim, halo, haloAnim
+local button, icon, glow, glowAnim, halo, haloAnim, badgePulse
 local badge, badgeText, badgeLeft, badgeMid, badgeRight
 local layoutKey = "default"
 local editing = false
@@ -144,9 +144,13 @@ function ns.Refresh()
 	local opacity = ns.db.opacity / 100
 	-- A slow breathing glow while anything is unread, so it's hard to miss.
 	if active and ns.db.pulse and not editing then
-		if not haloAnim:IsPlaying() then haloAnim:Play() end
+		if not haloAnim:IsPlaying() then
+			haloAnim:Play()
+			badgePulse:Play()
+		end
 	elseif haloAnim:IsPlaying() then
 		haloAnim:Stop()
+		badgePulse:Stop()
 	end
 	icon:SetDesaturated(not active)
 	if active then
@@ -166,7 +170,7 @@ function ns.ApplySettings()
 	local size = ns.db.iconSize
 	button:SetSize(size, size)
 	glow:SetSize(size * 1.9, size * 1.9)
-	halo:SetSize(size * 1.7, size * 1.7)
+	halo:SetSize(size * 2, size * 2)
 	-- The badge is designed for a 32px icon.
 	badge:SetScale(size / 32 * ns.db.badgeScale / 100)
 	badge:ClearAllPoints()
@@ -266,17 +270,18 @@ ns.OnLogin(function()
 
 	halo = button:CreateTexture(nil, "BACKGROUND", nil, -1)
 	halo:SetTexture(ns.MEDIA .. "Glow")
-	halo:SetBlendMode("ADD")
-	halo:SetVertexColor(1, 0.3, 0.3)
+	-- Normal blending (not additive) so it shows on bright scenery too.
+	halo:SetBlendMode("BLEND")
+	halo:SetVertexColor(1, 0.2, 0.22)
 	halo:SetPoint("CENTER", 0, 1)
 	halo:SetAlpha(0)
 
 	haloAnim = halo:CreateAnimationGroup()
 	haloAnim:SetLooping("BOUNCE")
 	local breathe = haloAnim:CreateAnimation("Alpha")
-	breathe:SetFromAlpha(0.05)
-	breathe:SetToAlpha(0.55)
-	breathe:SetDuration(1.2)
+	breathe:SetFromAlpha(0.1)
+	breathe:SetToAlpha(0.9)
+	breathe:SetDuration(0.7)
 	if breathe.SetSmoothing then breathe:SetSmoothing("IN_OUT") end
 
 	icon = button:CreateTexture(nil, "ARTWORK")
@@ -284,6 +289,21 @@ ns.OnLogin(function()
 	icon:SetAllPoints()
 
 	createBadge()
+
+	-- The badge swells gently in time with the halo.
+	badgePulse = badge:CreateAnimationGroup()
+	badgePulse:SetLooping("BOUNCE")
+	local swell = badgePulse:CreateAnimation("Scale")
+	if swell.SetScaleFrom then
+		swell:SetScaleFrom(1, 1)
+		swell:SetScaleTo(1.2, 1.2)
+	else
+		swell:SetFromScale(1, 1)
+		swell:SetToScale(1.2, 1.2)
+	end
+	swell:SetOrigin("CENTER", 0, 0)
+	swell:SetDuration(0.7)
+	if swell.SetSmoothing then swell:SetSmoothing("IN_OUT") end
 
 	button:SetScript("OnDragStart", function(self)
 		if not ns.db.locked and not editing then self:StartMoving() end
