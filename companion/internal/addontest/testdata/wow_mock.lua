@@ -6,7 +6,7 @@
 local clock = 0
 local timers = {}
 local frames = {}
-mock = { printed = {}, sounds = 0, root = nil }
+mock = { printed = {}, sounds = 0, root = nil, texelScale = 1, roundSizes = false }
 
 function GetTime() return clock end
 function time() return 1700000000 + math.floor(clock) end
@@ -72,7 +72,14 @@ mock.methods = {
 	SetHeight = function(self, h) self._h, self._sized = h, true end,
 	GetSize = function(self)
 		if self._kind == "Texture" and not self._sized then
-			if self._file then return tga_size(mock.root, self._file) end
+			if self._file then
+				-- Like the client: UI units, scaled by the screen, maybe rounded.
+				local w, h = tga_size(mock.root, self._file)
+				if mock.brokenBridge and self._file:find("Bridge", 1, true) then w, h = 1, 1 end
+				w, h = w * mock.texelScale, h * mock.texelScale
+				if mock.roundSizes then w, h = math.floor(w + 0.5), math.floor(h + 0.5) end
+				return w, h
+			end
 			return 0, 0
 		end
 		return self._w, self._h

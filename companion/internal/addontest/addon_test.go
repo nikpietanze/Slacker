@@ -43,6 +43,9 @@ func newAddon(t *testing.T) (*lua.LState, string) {
 		prefix := `Interface\AddOns\` + bridge.AddonName + `\`
 		rel := strings.ReplaceAll(strings.TrimPrefix(p, prefix), `\`, string(filepath.Separator))
 		b, err := os.ReadFile(filepath.Join(root, rel))
+		if err != nil && filepath.Ext(rel) == "" {
+			b, err = os.ReadFile(filepath.Join(root, rel+".tga")) // WoW allows leaving off .tga
+		}
 		if err != nil || len(b) < 18 {
 			L.Push(lua.LNumber(0))
 			L.Push(lua.LNumber(0))
@@ -125,8 +128,10 @@ func TestLuaCodecMatchesGo(t *testing.T) {
 			t.Fatalf("Lua decodes %dx%d as %s, Go says %s", w, h, got, want)
 		}
 	}
-	if got := eval(t, L, "ns.DecodeSize(3, 5)"); got != "nil" {
-		t.Errorf("non-bridge size decoded as %s", got)
+	for _, bad := range []string{"0, 0", "1, 1", "2, 0.5"} {
+		if got := eval(t, L, "ns.DecodeSize("+bad+")"); got != "nil" {
+			t.Errorf("DecodeSize(%s) = %s, want nil", bad, got)
+		}
 	}
 }
 
@@ -271,5 +276,44 @@ func TestNoReminderWhenConnected(t *testing.T) {
 		mock.popup = nil
 		ns.button._scripts.OnClick(ns.button, "LeftButton")
 		assert(mock.popup == nil, "left-click does nothing while connected")
+	`)
+}
+
+// On a Retina Mac the first real client measured the 2x2 placeholder as 1x1.
+// The addon calibrates against its 64x64 icon, so any screen scale (and
+// integer rounding of sizes) must decode the same.
+func TestBridgeSurvivesScreenScaling(t *testing.T) {
+	for _, scale := range []string{"0.55", "0.39", "0.71", "1.6", "2"} {
+		for _, rounded := range []string{"false", "true"} {
+			t.Run(scale+"/rounded="+rounded, func(t *testing.T) {
+				L, dir := newAddon(t)
+				run(t, L, "mock.texelScale = "+scale+"; mock.roundSizes = "+rounded+"; ns.count = nil; mock.advance(1.5)")
+				if got := eval(t, L, "ns.count"); got != "false" {
+					t.Fatalf("placeholder: %s (bridge %s, ref %s)", got, eval(t, L, "ns.lastSize"), eval(t, L, "ns.lastRef"))
+				}
+				for _, n := range []int{0, 1, 2, 3, 7, 12, 42, 98, 99, 150} {
+					must(t, bridge.WriteCode(dir, bridge.CodeForCount(n)))
+					run(t, L, "mock.advance(1.5)")
+					if got := eval(t, L, "ns.count"); got != itoa(min(n, bridge.MaxCount+1)) {
+						t.Fatalf("count %d read as %s (bridge %s, ref %s)", n, got, eval(t, L, "ns.lastSize"), eval(t, L, "ns.lastRef"))
+					}
+				}
+			})
+		}
+	}
+}
+
+func TestUnreadableBridgeIsReported(t *testing.T) {
+	L, _ := newAddon(t)
+	// A client that loads the bridge file but reports a useless size for it.
+	run(t, L, `
+		mock.brokenBridge = true; ns.count = nil
+		mock.advance(12)
+		local reported
+		for _, line in ipairs(mock.printed) do
+			if line:find("can't read its bridge file", 1, true) then reported = true end
+		end
+		assert(ns.count == nil, "nothing decodes")
+		assert(reported, "an unreadable bridge is reported in chat")
 	`)
 }
