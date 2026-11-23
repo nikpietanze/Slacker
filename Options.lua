@@ -1,4 +1,4 @@
--- Options under Esc > Options > AddOns > SlackNotify, built from Blizzard's
+-- Options under Esc > Options > AddOns > Slacker, built from Blizzard's
 -- native settings controls so it is searchable and has a Defaults button. The
 -- size options are also offered in the icon's Edit Mode dialog.
 local _, ns = ...
@@ -14,9 +14,9 @@ local function apply()
 end
 
 local function register(key, varType, name, default, onChange)
-	local setting = Settings.RegisterAddOnSetting(category, "SlackNotify_" .. key, key, ns.db, varType, name, default)
+	local setting = Settings.RegisterAddOnSetting(category, "Slacker_" .. key, key, ns.db, varType, name, default)
 	if onChange then
-		Settings.SetOnValueChangedCallback("SlackNotify_" .. key, onChange)
+		Settings.SetOnValueChangedCallback("Slacker_" .. key, onChange)
 	end
 	settings[key] = setting
 	return setting
@@ -87,7 +87,7 @@ local function soundChoices()
 end
 
 ns.OnLoad(function()
-	category, layout = Settings.RegisterVerticalLayoutCategory("SlackNotify")
+	category, layout = Settings.RegisterVerticalLayoutCategory("Slacker")
 	layout = layout or SettingsPanel:GetLayout(category)
 
 	header("Icon")

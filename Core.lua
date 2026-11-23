@@ -1,4 +1,4 @@
--- SlackNotify: a tiny icon that shows whether you have unread Slack desktop
+-- Slacker: a tiny icon that shows whether you have unread Slack desktop
 -- notifications. The addon never talks to Slack; the companion app on your
 -- computer does the watching (see Bridge.lua and docs/HOW-IT-WORKS.md).
 
@@ -29,7 +29,7 @@ function ns.OnLoad(fn) loadCallbacks[#loadCallbacks + 1] = fn end
 function ns.OnLogin(fn) loginCallbacks[#loginCallbacks + 1] = fn end
 
 function ns.Print(message)
-	print("|cff8b80f9SlackNotify|r " .. message)
+	print("|cff8b80f9Slacker|r " .. message)
 end
 
 function ns.Version()
@@ -97,8 +97,8 @@ frame:SetScript("OnEvent", function(self, event, name)
 	if event == "ADDON_LOADED" then
 		if name ~= ADDON_NAME then return end
 		self:UnregisterEvent("ADDON_LOADED")
-		SlackNotifyDB = migrate(SlackNotifyDB or {})
-		ns.db = SlackNotifyDB
+		SlackerDB = migrate(SlackerDB or {})
+		ns.db = SlackerDB
 		for _, fn in ipairs(loadCallbacks) do fn() end
 	elseif event == "PLAYER_LOGIN" then
 		self:UnregisterEvent("PLAYER_LOGIN")
@@ -116,7 +116,7 @@ local function printStatus()
 end
 
 -- Addon compartment (the addons button by the minimap).
-function SlackNotify_OnCompartmentClick(_, mouseButton)
+function Slacker_OnCompartmentClick(_, mouseButton)
 	if mouseButton == "RightButton" then
 		ns.RunTest()
 	else
@@ -124,16 +124,16 @@ function SlackNotify_OnCompartmentClick(_, mouseButton)
 	end
 end
 
-function SlackNotify_OnCompartmentEnter(_, button)
+function Slacker_OnCompartmentEnter(_, button)
 	GameTooltip:SetOwner(button, "ANCHOR_LEFT")
-	GameTooltip:SetText("SlackNotify")
+	GameTooltip:SetText("Slacker")
 	GameTooltip:AddLine("Slack: " .. ns.Describe(ns.count), 1, 1, 1)
 	GameTooltip:AddDoubleLine("Left-click", "Options", 1, 0.82, 0, 1, 1, 1)
 	GameTooltip:AddDoubleLine("Right-click", "Test badge", 1, 0.82, 0, 1, 1, 1)
 	GameTooltip:Show()
 end
 
-function SlackNotify_OnCompartmentLeave()
+function Slacker_OnCompartmentLeave()
 	GameTooltip:Hide()
 end
 
@@ -150,9 +150,9 @@ local commands = {
 	end,
 }
 
-SLASH_SLACKNOTIFY1 = "/slack"
-SLASH_SLACKNOTIFY2 = "/slacknotify"
-SlashCmdList.SLACKNOTIFY = function(input)
+SLASH_SLACKER1 = "/slack"
+SLASH_SLACKER2 = "/slacker"
+SlashCmdList.SLACKER = function(input)
 	local command = strtrim((input or ""):lower())
 	if command == "" or command == "options" or command == "config" then
 		ns.OpenOptions()

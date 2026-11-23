@@ -1,16 +1,16 @@
 <p align="center">
-  <img src="docs/logo/logo.png" alt="SlackNotify logo" width="160">
+  <img src="docs/logo/logo.png" alt="Slacker logo" width="160">
 </p>
 
-<h1 align="center">SlackNotify</h1>
+<h1 align="center">Slacker</h1>
 
 <p align="center">
   A tiny World of Warcraft: Forever addon that answers one question while you play: <b>do I need to check Slack?</b>
 </p>
 
 <p align="center">
-  <a href="https://github.com/nikpietanze/SlackNotify/releases/latest"><img src="https://img.shields.io/github/v/release/nikpietanze/SlackNotify?color=7468f2" alt="Latest release"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/nikpietanze/SlackNotify?color=b48352" alt="MIT license"></a>
+  <a href="https://github.com/nikpietanze/Slacker/releases/latest"><img src="https://img.shields.io/github/v/release/nikpietanze/Slacker?color=7468f2" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/nikpietanze/Slacker?color=b48352" alt="MIT license"></a>
 </p>
 
 <p align="center">
@@ -29,7 +29,7 @@ No message previews, no channel names, no senders. Only a number.
 A small **companion app** runs on your computer and watches the notifications Slack already shows through your operating system. It hands the count to the addon.
 
 ```
-Slack desktop ──► OS notifications ──► companion (local) ──► SlackNotify addon
+Slack desktop ──► OS notifications ──► companion (local) ──► Slacker addon
 ```
 
 - **No Slack connection.** The companion never talks to Slack: no tokens, no OAuth, no bot, no workspace app, no admin approval.
@@ -45,7 +45,7 @@ WoW addons can't open sockets or read files, so the companion writes a tiny blan
 
 ## Options
 
-Everything is under **Esc → Options → AddOns → SlackNotify** (or type `/slack`, right-click the icon, or click SlackNotify in the minimap's addons menu):
+Everything is under **Esc → Options → AddOns → Slacker** (or type `/slack`, right-click the icon, or click Slacker in the minimap's addons menu):
 
 | Section | Settings |
 |---|---|
@@ -66,19 +66,19 @@ The panel's **Defaults** button restores everything. To move the icon, click **M
 | `/slack status` | Print client, bridge and layout details for bug reports |
 | `/slack debug` | Print every read of the companion's bridge file |
 
-`/slacknotify` works too.
+`/slacker` works too.
 
 ## Install
 
 ### 1. The addon
 
-Download the latest `SlackNotify-*.zip` from [Releases](https://github.com/nikpietanze/SlackNotify/releases/latest) and extract it into your AddOns folder:
+Download the latest `Slacker-*.zip` from [Releases](https://github.com/nikpietanze/Slacker/releases/latest) and extract it into your AddOns folder:
 
 ```
-World of Warcraft/_forever_/Interface/AddOns/SlackNotify/SlackNotify.toc
+World of Warcraft/_forever_/Interface/AddOns/Slacker/Slacker.toc
 ```
 
-You can also clone this repo into that folder as `SlackNotify`. Target client: WoW Forever, Interface `16001`.
+You can also clone this repo into that folder as `Slacker`. Target client: WoW Forever, Interface `16001`.
 
 ### 2. The companion
 
@@ -86,17 +86,17 @@ Download the companion for your computer from the same release. It's one file, w
 
 **Windows**
 
-1. Download `slacknotify-companion-windows-amd64.exe` (or `-arm64`), rename it to `slacknotify-companion.exe`, and put it somewhere permanent, e.g. `%LOCALAPPDATA%\SlackNotify\`.
+1. Download `slacker-companion-windows-amd64.exe` (or `-arm64`), rename it to `slacker-companion.exe`, and put it somewhere permanent, e.g. `%LOCALAPPDATA%\Slacker\`.
 2. In Slack, open **Settings → Notifications** and make sure notifications are delivered through **Windows notifications**.
 3. Double-click it. A message confirms it's running in the background.
-4. Start it at login: run `.\slacknotify-companion.exe autostart on` in a terminal in that folder.
+4. Start it at login: run `.\slacker-companion.exe autostart on` in a terminal in that folder.
 
 **macOS**
 
 ```sh
-chmod +x slacknotify-companion-darwin-arm64        # -amd64 on Intel Macs
-xattr -d com.apple.quarantine slacknotify-companion-darwin-arm64
-./slacknotify-companion-darwin-arm64 autostart on   # installs a LaunchAgent and starts it
+chmod +x slacker-companion-darwin-arm64        # -amd64 on Intel Macs
+xattr -d com.apple.quarantine slacker-companion-darwin-arm64
+./slacker-companion-darwin-arm64 autostart on   # installs a LaunchAgent and starts it
 ```
 
 Make sure Slack can badge its Dock icon: **System Settings → Notifications → Slack → Badge application icon**.
@@ -104,17 +104,17 @@ Make sure Slack can badge its Dock icon: **System Settings → Notifications →
 **Linux** (WoW under Wine, Lutris, Steam/Proton or Bottles)
 
 ```sh
-chmod +x slacknotify-companion-linux-amd64
-./slacknotify-companion-linux-amd64 doctor
-./slacknotify-companion-linux-amd64 autostart on --wow-dir "$HOME/Games/battlenet/drive_c/Program Files (x86)/World of Warcraft"
+chmod +x slacker-companion-linux-amd64
+./slacker-companion-linux-amd64 doctor
+./slacker-companion-linux-amd64 autostart on --wow-dir "$HOME/Games/battlenet/drive_c/Program Files (x86)/World of Warcraft"
 ```
 
-The companion finds common install locations on its own. Otherwise, pass `--wow-dir "<folder containing _forever_>"` or `--addon-dir "<…/AddOns/SlackNotify>"`.
+The companion finds common install locations on its own. Otherwise, pass `--wow-dir "<folder containing _forever_>"` or `--addon-dir "<…/AddOns/Slacker>"`.
 
 ### 3. Check it works
 
-1. `slacknotify-companion doctor` shows what it can see and which addon folders it found.
-2. With the companion stopped and you logged into WoW, run `slacknotify-companion demo`. The badge should step through 1, 2, 3, 7, 12, 42, 99, 99+.
+1. `slacker-companion doctor` shows what it can see and which addon folders it found.
+2. With the companion stopped and you logged into WoW, run `slacker-companion demo`. The badge should step through 1, 2, 3, 7, 12, 42, 99, 99+.
 3. Start the companion again, then have someone DM you.
 
 If the badge only changes after `/reload`, see [Troubleshooting](docs/TROUBLESHOOTING.md#the-badge-only-updates-after-reload).
@@ -127,13 +127,13 @@ If the badge only changes after `/reload`, see [Troubleshooting](docs/TROUBLESHO
 
 ## Bugs and ideas
 
-Open an [issue](https://github.com/nikpietanze/SlackNotify/issues). For bugs, include the output of `/slack status` and `slacknotify-companion doctor`, plus any Lua error text (BugSack makes this easy). Pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Open an [issue](https://github.com/nikpietanze/Slacker/issues). For bugs, include the output of `/slack status` and `slacker-companion doctor`, plus any Lua error text (BugSack makes this easy). Pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
 MIT. See [LICENSE](LICENSE).
 
-SlackNotify bundles these libraries unmodified, each under its own license in its folder under `Libs`:
+Slacker bundles these libraries unmodified, each under its own license in its folder under `Libs`:
 
 - [LibStub](https://www.wowace.com/projects/libstub) (public domain)
 - [LibEditMode](https://github.com/p3lim-wow/LibEditMode) by p3lim (custom license that allows bundling unmodified)

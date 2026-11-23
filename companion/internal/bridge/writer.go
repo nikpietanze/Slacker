@@ -8,10 +8,10 @@ import (
 )
 
 // AddonName is the addon folder the companion writes into.
-const AddonName = "SlackNotify"
+const AddonName = "Slacker"
 
 // relPath is the bridge texture relative to the addon folder. The addon loads
-// it as Interface\AddOns\SlackNotify\Bridge\count.tga.
+// it as Interface\AddOns\Slacker\Bridge\count.tga.
 var relPath = filepath.Join("Bridge", "count.tga")
 
 // WriteCode writes the bridge texture for code into one addon directory.

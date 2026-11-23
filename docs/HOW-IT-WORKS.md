@@ -8,7 +8,7 @@ An addon *can* load a texture from its own folder. Once loaded, `Texture:GetSize
 
 ## The bridge file
 
-The companion writes `Interface/AddOns/SlackNotify/Bridge/count.tga`: a blank 8-bit grayscale TGA whose width and height encode one value.
+The companion writes `Interface/AddOns/Slacker/Bridge/count.tga`: a blank 8-bit grayscale TGA whose width and height encode one value.
 
 | Value | Meaning |
 |---|---|

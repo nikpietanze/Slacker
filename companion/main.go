@@ -1,5 +1,5 @@
-// Command slacknotify-companion mirrors the number of Slack desktop
-// notifications into the SlackNotify World of Warcraft addon.
+// Command slacker-companion mirrors the number of Slack desktop
+// notifications into the Slacker World of Warcraft addon.
 //
 // It never contacts Slack or any server: it reads what Slack already shows
 // through the operating system and writes a tiny file into the addon folder.
@@ -20,9 +20,9 @@ import (
 	"syscall"
 	"time"
 
-	"wow-slack-notify/companion/internal/autostart"
-	"wow-slack-notify/companion/internal/bridge"
-	"wow-slack-notify/companion/internal/source"
+	"slacker/companion/internal/autostart"
+	"slacker/companion/internal/bridge"
+	"slacker/companion/internal/source"
 )
 
 var version = "dev"
@@ -41,19 +41,19 @@ type config struct {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, `slacknotify-companion %s
+	fmt.Fprintf(os.Stderr, `slacker-companion %s
 
-Mirrors your Slack desktop notification count into the SlackNotify WoW addon.
+Mirrors your Slack desktop notification count into the Slacker WoW addon.
 Local only: no Slack login, no network.
 
 Usage:
-  slacknotify-companion [run] [flags]     watch notifications (default)
-  slacknotify-companion doctor [flags]    check setup and show what is detected
-  slacknotify-companion demo [flags]      cycle fake counts to test the in-game badge
-  slacknotify-companion set N|off [flags] write one value and exit
-  slacknotify-companion autostart on|off [flags]
+  slacker-companion [run] [flags]     watch notifications (default)
+  slacker-companion doctor [flags]    check setup and show what is detected
+  slacker-companion demo [flags]      cycle fake counts to test the in-game badge
+  slacker-companion set N|off [flags] write one value and exit
+  slacker-companion autostart on|off [flags]
                                           start (or stop starting) at login
-  slacknotify-companion version
+  slacker-companion version
 
 Flags:
 `, version)
@@ -67,8 +67,8 @@ func newFlagSet(name string) *flag.FlagSet {
 }
 
 func parseFlags(args []string, cfg *config) ([]string, error) {
-	fs := newFlagSet("slacknotify-companion")
-	fs.Var(&cfg.addonDirs, "addon-dir", "path to the installed SlackNotify addon folder (repeatable)")
+	fs := newFlagSet("slacker-companion")
+	fs.Var(&cfg.addonDirs, "addon-dir", "path to the installed Slacker addon folder (repeatable)")
 	fs.Var(&cfg.wowDirs, "wow-dir", `World of Warcraft folder, the one containing _forever_ (repeatable)`)
 	def := time.Second
 	if runtime.GOOS == "darwin" {
@@ -169,16 +169,16 @@ func defaultLogPath() string {
 	if err != nil {
 		dir = os.TempDir()
 	}
-	return filepath.Join(dir, "SlackNotify", "companion.log")
+	return filepath.Join(dir, "Slacker", "companion.log")
 }
 
 func discover(cfg config) []string {
 	return bridge.Discover(cfg.addonDirs, cfg.wowDirs)
 }
 
-const noAddonHelp = `no SlackNotify addon folder found.
-Install the addon into <WoW>/_forever_/Interface/AddOns/SlackNotify, or pass
---wow-dir "<path to World of Warcraft>" or --addon-dir "<path to the SlackNotify folder>"`
+const noAddonHelp = `no Slacker addon folder found.
+Install the addon into <WoW>/_forever_/Interface/AddOns/Slacker, or pass
+--wow-dir "<path to World of Warcraft>" or --addon-dir "<path to the Slacker folder>"`
 
 // publisher writes the current code into every addon folder it knows about,
 // picking up newly installed copies as it goes.
@@ -231,7 +231,7 @@ func run(cfg config, logger *log.Logger, interactiveLaunch bool) error {
 		return fmt.Errorf("%s", noAddonHelp)
 	}
 	src := source.New(source.Options{Interval: cfg.interval, Log: logger, Verbose: cfg.verbose})
-	logger.Printf("slacknotify-companion %s watching %s", version, src.Name())
+	logger.Printf("slacker-companion %s watching %s", version, src.Name())
 	for _, d := range dirs {
 		logger.Printf("bridging to %s", d)
 	}
@@ -291,7 +291,7 @@ func run(cfg config, logger *log.Logger, interactiveLaunch bool) error {
 }
 
 func doctor(cfg config) error {
-	fmt.Printf("slacknotify-companion %s on %s/%s\n\n", version, runtime.GOOS, runtime.GOARCH)
+	fmt.Printf("slacker-companion %s on %s/%s\n\n", version, runtime.GOOS, runtime.GOARCH)
 	src := source.New(source.Options{Interval: cfg.interval, Log: log.New(io.Discard, "", 0)})
 	fmt.Printf("Notification source: %s\n", src.Name())
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -369,7 +369,7 @@ func demo(cfg config) error {
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-	fmt.Println("Cycling fake counts; watch the SlackNotify icon in game. Ctrl+C to stop.")
+	fmt.Println("Cycling fake counts; watch the Slacker icon in game. Ctrl+C to stop.")
 	steps := []int{0, 1, 2, 3, 7, 12, 42, 99, 150, 0}
 	for _, n := range steps {
 		if err := writeAll(cfg, bridge.CodeForCount(n)); err != nil {

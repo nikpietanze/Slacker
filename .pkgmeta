@@ -1,4 +1,4 @@
-package-as: SlackNotify
+package-as: Slacker
 
 manual-changelog:
   filename: CHANGELOG.md

@@ -17,7 +17,7 @@ build:
 		if [ $$os = windows ]; then ext=.exe; flags="$$flags -H=windowsgui"; fi; \
 		echo "building $$os/$$arch"; \
 		(cd companion && CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -trimpath -ldflags "$$flags" \
-			-o ../$(DIST)/slacknotify-companion-$$os-$$arch$$ext .) || exit 1; \
+			-o ../$(DIST)/slacker-companion-$$os-$$arch$$ext .) || exit 1; \
 	done
 
 art:

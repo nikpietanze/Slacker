@@ -10,7 +10,7 @@ A tiny icon that tells you when you have Slack notifications, without leaving th
 
 ## Needs the companion app
 
-WoW addons can't see other programs, so a small companion app (Windows, macOS, Linux) watches the notifications Slack already shows and passes the count to the addon. Download it from [GitHub Releases](https://github.com/nikpietanze/SlackNotify/releases/latest).
+WoW addons can't see other programs, so a small companion app (Windows, macOS, Linux) watches the notifications Slack already shows and passes the count to the addon. Download it from [GitHub Releases](https://github.com/nikpietanze/Slacker/releases/latest).
 
 ## Commands
 
@@ -24,4 +24,4 @@ WoW addons can't see other programs, so a small companion app (Windows, macOS, L
 
 ## Bugs and ideas
 
-[GitHub Issues](https://github.com/nikpietanze/SlackNotify/issues). Include `/slack status` and any Lua errors.
+[GitHub Issues](https://github.com/nikpietanze/Slacker/issues). Include `/slack status` and any Lua errors.

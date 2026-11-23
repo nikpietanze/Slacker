@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping out. A few ground rules keep SlackNotify small and safe to run:
+Thanks for helping out. A few ground rules keep Slacker small and safe to run:
 
 - **Keep the scope.** The addon answers "do I need to check Slack?" and nothing more. Message previews, senders, channel names and Slack API access are out of scope (see "Non-goals" in [docs/HANDOFF.md](docs/HANDOFF.md)).
 - **Privacy first.** The companion makes no network connections and never reads notification text. Windows and Linux look only at which app a notification came from, and macOS reads only a number.
@@ -13,7 +13,7 @@ Thanks for helping out. A few ground rules keep SlackNotify small and safe to ru
 
 | Path | What |
 |---|---|
-| `SlackNotify.toc`, `*.lua` | The addon, at the repo root so you can clone it straight into `AddOns`. `Core.lua` holds settings and commands, `Bridge.lua` reads the companion, `Icon.lua` draws the icon, and `Options.lua` builds the options panel. |
+| `Slacker.toc`, `*.lua` | The addon, at the repo root so you can clone it straight into `AddOns`. `Core.lua` holds settings and commands, `Bridge.lua` reads the companion, `Icon.lua` draws the icon, and `Options.lua` builds the options panel. |
 | `Libs/` | LibStub and LibEditMode, bundled unmodified |
 | `Media/`, `Bridge/` | Textures (generated, see below) and the bridge placeholder |
 | `companion/` | The companion app in Go. One static binary per OS. |
@@ -36,7 +36,7 @@ make art     # redraw the textures and logo
 
 `make art` draws the default `round` style. To try the others, run `go run ./cmd/genart -style flat ..` (or `glass`) from `companion/`.
 
-To try it in game, symlink the repo into `_forever_/Interface/AddOns/SlackNotify`. Then run `go run . demo --wow-dir "<WoW folder>"` from `companion/` and turn on `/slack debug`. The companion rewrites `Bridge/count.tga` while it runs. Don't commit that file unless it's the 2×2 placeholder (`go run . set off` puts it back).
+To try it in game, symlink the repo into `_forever_/Interface/AddOns/Slacker`. Then run `go run . demo --wow-dir "<WoW folder>"` from `companion/` and turn on `/slack debug`. The companion rewrites `Bridge/count.tga` while it runs. Don't commit that file unless it's the 2×2 placeholder (`go run . set off` puts it back).
 
 Before a release, go through [docs/TESTING.md](docs/TESTING.md).
 

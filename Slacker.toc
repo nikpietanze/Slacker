@@ -1,0 +1,23 @@
+## Interface: 16001
+## Title: Slacker
+## Notes: A tiny movable icon that shows when you have unread Slack desktop notifications. Needs the Slacker companion app.
+## Author: Slacker contributors
+## Version: @project-version@
+## IconTexture: Interface\AddOns\Slacker\Media\Icon
+## Category: Miscellaneous
+## X-License: MIT
+## X-Website: https://github.com/nikpietanze/Slacker
+## X-Category: Miscellaneous
+## SavedVariables: SlackerDB
+## OptionalDeps: LibSharedMedia-3.0
+## AddonCompartmentFunc: Slacker_OnCompartmentClick
+## AddonCompartmentFuncOnEnter: Slacker_OnCompartmentEnter
+## AddonCompartmentFuncOnLeave: Slacker_OnCompartmentLeave
+
+Libs\LibStub\LibStub.lua
+Libs\LibEditMode\embed.xml
+
+Core.lua
+Bridge.lua
+Icon.lua
+Options.lua

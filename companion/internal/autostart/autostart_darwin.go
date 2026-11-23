@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-const label = "com.github.wow-slack-notify.companion"
+const label = "com.github.slacker.companion"
 
 func plistPath() string {
 	home, _ := os.UserHomeDir()

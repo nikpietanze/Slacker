@@ -21,7 +21,7 @@ import (
 
 	"golang.org/x/image/vector"
 
-	"wow-slack-notify/companion/internal/bridge"
+	"slacker/companion/internal/bridge"
 )
 
 // Outline of "S" from Noto Sans Bold (SIL Open Font License 1.1), in font

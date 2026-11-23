@@ -4,7 +4,7 @@ labels: [enhancement]
 body:
   - type: markdown
     attributes:
-      value: SlackNotify aims to stay tiny. Check "Non-goals" in docs/HANDOFF.md before suggesting a big addition. Message previews, senders, channel names and anything that connects to Slack directly are out of scope on purpose.
+      value: Slacker aims to stay tiny. Check "Non-goals" in docs/HANDOFF.md before suggesting a big addition. Message previews, senders, channel names and anything that connects to Slack directly are out of scope on purpose.
   - type: textarea
     id: idea
     attributes:

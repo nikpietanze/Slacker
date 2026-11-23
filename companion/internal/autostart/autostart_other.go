@@ -14,7 +14,7 @@ func desktopPath() string {
 		home, _ := os.UserHomeDir()
 		dir = filepath.Join(home, ".config")
 	}
-	return filepath.Join(dir, "autostart", "slacknotify-companion.desktop")
+	return filepath.Join(dir, "autostart", "slacker-companion.desktop")
 }
 
 // Enable writes an XDG autostart entry that starts exe with args at login.
@@ -23,8 +23,8 @@ func Enable(exe string, args []string) (string, error) {
 	for _, a := range args {
 		cmd = append(cmd, quote(a))
 	}
-	content := "[Desktop Entry]\nType=Application\nName=Slack Notify Companion\n" +
-		"Comment=Mirrors Slack notification count into the WoW SlackNotify addon\n" +
+	content := "[Desktop Entry]\nType=Application\nName=Slacker Companion\n" +
+		"Comment=Mirrors Slack notification count into the WoW Slacker addon\n" +
 		"Exec=" + strings.Join(cmd, " ") + "\nTerminal=false\nNoDisplay=true\nX-GNOME-Autostart-enabled=true\n"
 	p := desktopPath()
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {

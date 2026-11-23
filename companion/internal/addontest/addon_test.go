@@ -10,7 +10,7 @@ import (
 
 	lua "github.com/yuin/gopher-lua"
 
-	"wow-slack-notify/companion/internal/bridge"
+	"slacker/companion/internal/bridge"
 )
 
 // The addon lives at the repo root.
@@ -37,7 +37,7 @@ func newAddon(t *testing.T) (*lua.LState, string) {
 
 	L := lua.NewState()
 	t.Cleanup(L.Close)
-	// tga_size(root, [[Interface\AddOns\SlackNotify\Bridge\count.tga]]) -> w, h
+	// tga_size(root, [[Interface\AddOns\Slacker\Bridge\count.tga]]) -> w, h
 	L.SetGlobal("tga_size", L.NewFunction(func(L *lua.LState) int {
 		root, p := L.CheckString(1), L.CheckString(2)
 		prefix := `Interface\AddOns\` + bridge.AddonName + `\`
@@ -66,7 +66,7 @@ func newAddon(t *testing.T) (*lua.LState, string) {
 		must(t, L.PCall(2, 0, nil))
 	}
 	L.SetGlobal("ns", ns)
-	run(t, L, `mock.fire("ADDON_LOADED", "SlackNotify"); mock.fire("PLAYER_LOGIN"); mock.advance(1)`)
+	run(t, L, `mock.fire("ADDON_LOADED", "Slacker"); mock.fire("PLAYER_LOGIN"); mock.advance(1)`)
 	return L, dir
 }
 
@@ -135,7 +135,7 @@ func TestBadgeFollowsCompanion(t *testing.T) {
 	if got := eval(t, L, "ns.count"); got != "false" {
 		t.Fatalf("shipped placeholder should read as offline, got %s", got)
 	}
-	run(t, L, `SlackNotifyDB.sound = "kit:TELL_MESSAGE"`)
+	run(t, L, `SlackerDB.sound = "kit:TELL_MESSAGE"`)
 	steps := []struct {
 		count   int
 		badge   string
@@ -183,28 +183,28 @@ func TestBadgeFollowsCompanion(t *testing.T) {
 func TestSlashCommands(t *testing.T) {
 	L, _ := newAddon(t)
 	run(t, L, `
-		SlashCmdList.SLACKNOTIFY("lock")
-		assert(SlackNotifyDB.locked == true, "lock")
-		SlashCmdList.SLACKNOTIFY("  UNLOCK ")
-		assert(SlackNotifyDB.locked == false, "unlock")
-		SlashCmdList.SLACKNOTIFY("")
-		assert(mock.openedOptions == "SlackNotify", "options open")
-		SlashCmdList.SLACKNOTIFY("status")
+		SlashCmdList.SLACKER("lock")
+		assert(SlackerDB.locked == true, "lock")
+		SlashCmdList.SLACKER("  UNLOCK ")
+		assert(SlackerDB.locked == false, "unlock")
+		SlashCmdList.SLACKER("")
+		assert(mock.openedOptions == "Slacker", "options open")
+		SlashCmdList.SLACKER("status")
 		local found
 		for _, line in ipairs(mock.printed) do
 			if line:find("dev on client 1.60.1", 1, true) then found = true end
 		end
 		assert(found, "status prints version and client")
-		SlashCmdList.SLACKNOTIFY("bogus")
-		SlashCmdList.SLACKNOTIFY("debug")
-		SlashCmdList.SLACKNOTIFY("test")
+		SlashCmdList.SLACKER("bogus")
+		SlashCmdList.SLACKER("debug")
+		SlashCmdList.SLACKER("test")
 		mock.advance(2)
 		assert(ns.count == 3, "test mode shows fake counts, got " .. tostring(ns.count))
 		mock.advance(8)
 		assert(ns.count == false, "test mode hands back to the bridge, got " .. tostring(ns.count))
-		SlackNotify_OnCompartmentClick(nil, "LeftButton")
-		SlackNotify_OnCompartmentEnter(nil, ns.button)
-		SlackNotify_OnCompartmentLeave()
+		Slacker_OnCompartmentClick(nil, "LeftButton")
+		Slacker_OnCompartmentEnter(nil, ns.button)
+		Slacker_OnCompartmentLeave()
 	`)
 }
 
@@ -226,12 +226,12 @@ func TestSettingsAndPosition(t *testing.T) {
 
 		-- dragging saves an offset from the screen centre (mock centre 512,384)
 		ns.button._scripts.OnDragStop(ns.button)
-		local p = SlackNotifyDB.positions.default
+		local p = SlackerDB.positions.default
 		assert(p.point == "CENTER" and p.x == -12 and p.y == 16, "drag position saved")
 		ns.ResetPosition()
-		assert(SlackNotifyDB.positions.default.y == ns.DEFAULT_POSITION.y, "reset position")
+		assert(SlackerDB.positions.default.y == ns.DEFAULT_POSITION.y, "reset position")
 
 		ns.ResetSettings()
-		assert(SlackNotifyDB.iconSize == 32 and SlackNotifyDB.sound == "none", "defaults restored")
+		assert(SlackerDB.iconSize == 32 and SlackerDB.sound == "none", "defaults restored")
 	`)
 }

@@ -32,7 +32,7 @@ jobs:
           fi
           IFS=. read -r major minor patch build <<< "$version"
           live=$((major * 10000 + minor * 100 + patch))
-          toc=$(sed -n 's/^## Interface: *\([0-9]*\).*/\1/p' SlackNotify.toc | tr -d '\r')
+          toc=$(sed -n 's/^## Interface: *\([0-9]*\).*/\1/p' Slacker.toc | tr -d '\r')
           echo "Live: $version (Interface $live). TOC: Interface $toc."
           if [ "$live" = "$toc" ]; then
             echo "Up to date."
@@ -47,12 +47,12 @@ jobs:
           fi
 
           gh issue create --title "$title" --body "$(cat <<EOF
-          WoW Forever **$version** is live. SlackNotify's TOC still says \`## Interface: $toc\`.
+          WoW Forever **$version** is live. Slacker's TOC still says \`## Interface: $toc\`.
 
           - [ ] Check what changed in Blizzard's UI code: https://github.com/Gethe/wow-ui-source
-          - [ ] Log in with BugSack on, run \`slacknotify-companion demo\` and check the badge updates without \`/reload\`
+          - [ ] Log in with BugSack on, run \`slacker-companion demo\` and check the badge updates without \`/reload\`
           - [ ] Move the icon in Edit Mode, open the options panel, enter combat
-          - [ ] Update \`## Interface\` in SlackNotify.toc to \`$live\`
+          - [ ] Update \`## Interface\` in Slacker.toc to \`$live\`
           - [ ] Add a CHANGELOG entry, then tag a release
 
           Opened automatically by the WoW version check workflow.

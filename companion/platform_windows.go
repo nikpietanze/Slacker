@@ -38,7 +38,7 @@ func init() {
 func hasConsole() bool { return console }
 
 func singleInstance() (func(), bool) {
-	name, _ := windows.UTF16PtrFromString(`Local\SlackNotifyCompanion`)
+	name, _ := windows.UTF16PtrFromString(`Local\SlackerCompanion`)
 	h, err := windows.CreateMutex(nil, false, name)
 	if err == windows.ERROR_ALREADY_EXISTS {
 		windows.CloseHandle(h)
@@ -49,7 +49,7 @@ func singleInstance() (func(), bool) {
 
 func msgBox(text string, flags uintptr) {
 	t, _ := syscall.UTF16PtrFromString(text)
-	c, _ := syscall.UTF16PtrFromString("SlackNotify Companion")
+	c, _ := syscall.UTF16PtrFromString("Slacker Companion")
 	messageBox.Call(0, uintptr(unsafe.Pointer(t)), uintptr(unsafe.Pointer(c)), flags)
 }
 
@@ -59,8 +59,8 @@ func notifyStarted(dirs int) {
 		return
 	}
 	go msgBox(fmt.Sprintf("The companion is now running in the background and bridging to %d addon folder(s).\n\n"+
-		"To start it automatically at login, run:\n  slacknotify-companion autostart on\n\n"+
-		"To stop it, end \"slacknotify-companion\" in Task Manager.", dirs), 0x40 /* MB_ICONINFORMATION */)
+		"To start it automatically at login, run:\n  slacker-companion autostart on\n\n"+
+		"To stop it, end \"slacker-companion\" in Task Manager.", dirs), 0x40 /* MB_ICONINFORMATION */)
 }
 
 func showError(err error) {

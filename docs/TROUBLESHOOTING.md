@@ -3,7 +3,7 @@
 Start with:
 
 ```
-slacknotify-companion doctor
+slacker-companion doctor
 ```
 
 It shows the notification source, what it can see right now, which addon folders it will write to, and what the bridge file currently says.
@@ -13,16 +13,16 @@ In game, `/slack status` shows what the addon last read, and `/slack debug` prin
 ## The icon says "companion not running"
 
 - The companion isn't running, or it can't find your addon folder. Run `doctor`.
-- It writes to every `World of Warcraft/_*_/Interface/AddOns/SlackNotify` it finds. If your WoW is somewhere unusual, pass `--wow-dir` (the folder that contains `_forever_`) or `--addon-dir` (the `SlackNotify` folder itself). If you use autostart, run `autostart on` again with the same flags.
+- It writes to every `World of Warcraft/_*_/Interface/AddOns/Slacker` it finds. If your WoW is somewhere unusual, pass `--wow-dir` (the folder that contains `_forever_`) or `--addon-dir` (the `Slacker` folder itself). If you use autostart, run `autostart on` again with the same flags.
 - If you installed the addon after starting WoW, `/reload` once.
 
 ## The badge only updates after `/reload`
 
 The live bridge relies on the game client re-reading `Bridge/count.tga` after the addon releases it. Check:
 
-1. Run `slacknotify-companion demo` with the companion stopped, and watch the icon.
+1. Run `slacker-companion demo` with the companion stopped, and watch the icon.
 2. In game, `/slack debug` prints `bridge WxH -> value` every second.
-   - If the size never changes while `demo` runs, the client is serving a cached copy. Please [open an issue](https://github.com/nikpietanze/SlackNotify/issues) with your client version (`/dump GetBuildInfo()`) and OS.
+   - If the size never changes while `demo` runs, the client is serving a cached copy. Please [open an issue](https://github.com/nikpietanze/Slacker/issues) with your client version (`/dump GetBuildInfo()`) and OS.
    - If it prints `0x0`, the texture isn't loading. Make sure `Bridge/count.tga` exists in the addon folder; it ships with the addon.
 
 `/reload` always picks up the current count, so that is the fallback.
@@ -52,12 +52,12 @@ The count clears when the Slack window is focused, or when you clear Slack's not
 
 ## The addon shows "Out of date"
 
-Tick *Load out of date AddOns* on the character-select AddOns screen, or set the `## Interface:` line in `SlackNotify.toc` to the number from `/dump select(4, GetBuildInfo())`.
+Tick *Load out of date AddOns* on the character-select AddOns screen, or set the `## Interface:` line in `Slacker.toc` to the number from `/dump select(4, GetBuildInfo())`.
 
 ## Uninstall
 
 ```
-slacknotify-companion autostart off
+slacker-companion autostart off
 ```
 
-Then delete the binary and the `SlackNotify` addon folder. The settings live in `WTF/Account/<account>/SavedVariables/SlackNotify.lua`.
+Then delete the binary and the `Slacker` addon folder. The settings live in `WTF/Account/<account>/SavedVariables/Slacker.lua`.

@@ -19,7 +19,7 @@ body:
   - type: textarea
     id: status
     attributes:
-      label: SlackNotify status
+      label: Slacker status
       description: Paste the output of `/slack status`.
       render: text
   - type: dropdown
@@ -33,12 +33,12 @@ body:
     id: doctor
     attributes:
       label: Companion check
-      description: Paste the output of `slacknotify-companion doctor`. Paths may include your username, so edit them out if you like.
+      description: Paste the output of `slacker-companion doctor`. Paths may include your username, so edit them out if you like.
       render: text
   - type: dropdown
     id: live
     attributes:
-      label: Does `slacknotify-companion demo` change the badge without `/reload`?
+      label: Does `slacker-companion demo` change the badge without `/reload`?
       options: ["Yes", "No", "Didn't try"]
   - type: textarea
     id: errors

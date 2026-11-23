@@ -6,7 +6,7 @@ import (
 	"sort"
 )
 
-// Discover returns every installed SlackNotify addon folder it can find.
+// Discover returns every installed Slacker addon folder it can find.
 //
 // explicitAddonDirs are used as-is. wowRoots are World of Warcraft install
 // folders (the one that contains _forever_, _retail_, ...). When both are

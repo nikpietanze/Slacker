@@ -2,14 +2,14 @@
 
 Run through this list before tagging a release. Note your client build from `/slack status`, and keep BugSack open.
 
-SlackNotify's logic and the companion are covered by tests outside the game (`make test`). Live texture reloading, Edit Mode, the options panel and layout still need a real client.
+Slacker's logic and the companion are covered by tests outside the game (`make test`). Live texture reloading, Edit Mode, the options panel and layout still need a real client.
 
 ## Bridge
 
 | Check | Expected result |
 |---|---|
 | Offline | With the companion stopped, the icon is dim and the tooltip says the companion isn't running. |
-| Live updates | Run `slacknotify-companion demo`. The badge steps through 1, 2, 3, 7, 12, 42, 99, 99+ **without** `/reload`. With `/slack debug` on, each read prints the new size. |
+| Live updates | Run `slacker-companion demo`. The badge steps through 1, 2, 3, 7, 12, 42, 99, 99+ **without** `/reload`. With `/slack debug` on, each read prints the new size. |
 | Real notification | Start the companion and minimize Slack. A DM from someone shows a badge within about two seconds. |
 | Clear | Focus Slack (Windows) or read the message (macOS, Linux). The badge goes away. |
 | Reload | `/reload` while the badge shows a count. It comes back with the same count, without a flash or sound. |
@@ -23,7 +23,7 @@ SlackNotify's logic and the companion are covered by tests outside the game (`ma
 | Tooltip | Hover shows `Slack: N notifications`, the time of the last one, and the hint line. Turning **Tooltip** off hides it. |
 | New notification | The icon flashes three times. With a sound chosen, it plays once. Neither happens at login or after `/reload`. |
 | Drag | While unlocked, dragging moves the icon, and the position survives `/reload`. Locked, dragging does nothing. |
-| Edit Mode | **Move** opens Edit Mode with a selection box labeled "Slack Notify" and a sample badge. Dragging saves. Selecting it shows Icon size, Badge size, Opacity and More options. Switching Edit Mode layouts moves the icon to that layout's spot. |
+| Edit Mode | **Move** opens Edit Mode with a selection box labeled "Slacker" and a sample badge. Dragging saves. Selecting it shows Icon size, Badge size, Opacity and More options. Switching Edit Mode layouts moves the icon to that layout's spot. |
 | Sizes | Icon size, Badge size and Opacity apply live from both the options panel and Edit Mode, and the two stay in sync. |
 | Right-click | Opens the options panel. |
 | Combat | Hover, drag and badge updates in combat raise no errors or taint. |
@@ -32,7 +32,7 @@ SlackNotify's logic and the companion are covered by tests outside the game (`ma
 
 | Check | Expected result |
 |---|---|
-| Panel | Esc → Options → AddOns → SlackNotify lists every setting. **Defaults** restores them. |
+| Panel | Esc → Options → AddOns → Slacker lists every setting. **Defaults** restores them. |
 | Sound | Picking a sound in the dropdown plays it. SharedMedia sounds show up when installed. |
 | Test | **Test** and `/slack test` cycle sample counts, then hand back to the real count. |
 | Compartment | The minimap addons menu entry opens options on left-click and tests on right-click. |
@@ -43,4 +43,4 @@ SlackNotify's logic and the companion are covered by tests outside the game (`ma
 - The client re-reads `Bridge\count.tga` after the probe texture is cleared and set again. This is the whole live-update mechanism. If it caches the file, only `/reload` updates the badge.
 - `Texture:GetSize()` on the unsized, single-anchor probe returns the file's native size once `IsObjectLoaded()` is true, including while its alpha is 0.
 - 8-bit grayscale TGA loads, at sizes up to 128×1024.
-- LibEditMode lists Interface 16001 as supported (PoisonSlot uses it on this client). If it errors, SlackNotify falls back to dragging.
+- LibEditMode lists Interface 16001 as supported (PoisonSlot uses it on this client). If it errors, Slacker falls back to dragging.

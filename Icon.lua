@@ -120,7 +120,7 @@ local function showTooltip(self)
 	GameTooltip:SetOwner(self, top and "ANCHOR_BOTTOMLEFT" or "ANCHOR_TOPLEFT")
 	GameTooltip:AddLine("Slack: " .. ns.Describe(ns.count), 1, 1, 1)
 	if ns.count == false then
-		GameTooltip:AddLine("Start the SlackNotify companion on your computer.", 0.7, 0.7, 0.7, true)
+		GameTooltip:AddLine("Start the Slacker companion on your computer.", 0.7, 0.7, 0.7, true)
 	elseif type(ns.count) == "number" and ns.count > 0 and ns.lastNotified then
 		GameTooltip:AddLine("Last: " .. date("%H:%M", ns.lastNotified), 0.7, 0.7, 0.7)
 	end
@@ -180,7 +180,7 @@ local function setupEditMode()
 	if not LEM then return end
 	LEM:AddFrame(button, function(_, layoutName, point, x, y)
 		savePosition(point, x, y, layoutName or "default")
-	end, ns.DEFAULT_POSITION, "Slack Notify")
+	end, ns.DEFAULT_POSITION, "Slacker")
 	LEM:RegisterCallback("enter", function()
 		editing = true
 		GameTooltip:Hide()
@@ -222,7 +222,7 @@ end
 -- Construction
 ---------------------------------------------------------------------------
 ns.OnLogin(function()
-	button = CreateFrame("Button", "SlackNotifyButton", UIParent)
+	button = CreateFrame("Button", "SlackerButton", UIParent)
 	button:SetFrameStrata("MEDIUM")
 	button:SetClampedToScreen(true)
 	button:SetMovable(true)

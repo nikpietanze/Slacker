@@ -127,7 +127,7 @@ func (s *windowsSource) query(sql string) ([][]string, error) {
 		}
 		err = qerr
 	}
-	tmp := filepath.Join(os.TempDir(), "slacknotify-wpn")
+	tmp := filepath.Join(os.TempDir(), "slacker-wpn")
 	os.MkdirAll(tmp, 0o700)
 	os.Remove(filepath.Join(tmp, "wpn.db-shm"))
 	os.Remove(filepath.Join(tmp, "wpn.db-wal"))

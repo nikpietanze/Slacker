@@ -1,4 +1,4 @@
-module wow-slack-notify/companion
+module slacker/companion
 
 go 1.26.0
 
