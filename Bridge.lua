@@ -82,8 +82,14 @@ end
 
 ---------------------------------------------------------------------------
 -- Poller. The probe texture has no size of its own and a single anchor, so
--- once loaded, GetSize() reports the file's native pixel size. Clearing it
--- first lets the client drop its cached copy and read the file again.
+-- once loaded, GetSize() reports the file's pixel size.
+--
+-- The client keeps a texture in memory while anything uses it, and only
+-- drops unused textures in a periodic sweep; after that, loading the path
+-- again reads the file from disk. So the probe holds the bridge texture
+-- only for the frame or two it takes to measure it. Holding it all the
+-- time (as early versions did) means the sweep never frees it and the
+-- count never changes after the first read.
 ---------------------------------------------------------------------------
 local probeFrame = CreateFrame("Frame", nil, UIParent)
 probeFrame:SetSize(1, 1)
@@ -97,11 +103,22 @@ ref:SetPoint("TOPLEFT")
 ref:SetAlpha(0)
 
 local waiting, waitStart = false, 0
+local LOG_SIZE = 30
+
+-- Keeps the last few changes (with times) in the saved settings, so a bug
+-- report can show how quickly the client picked up each one.
+local function logChange(value)
+	local log = ns.db.bridgeLog or {}
+	ns.db.bridgeLog = log
+	log[#log + 1] = ("%s %s -> %s"):format(date("%H:%M:%S"), ns.lastSize, tostring(value))
+	while #log > LOG_SIZE do table.remove(log, 1) end
+end
 
 local function finishProbe()
 	waiting = false
 	probeFrame:SetScript("OnUpdate", nil)
 	local w, h = probe:GetSize()
+	probe:SetTexture(nil) -- let go right away so the client can drop it
 	local rw, rh = ref:GetSize()
 	ns.lastSize = ("%.2fx%.2f"):format(w, h)
 	ns.lastRef = ("%.2fx%.2f"):format(rw, rh)
@@ -113,6 +130,7 @@ local function finishProbe()
 	if ns.debug then
 		ns.Print(("bridge %s, reference %s -> %s"):format(ns.lastSize, ns.lastRef, tostring(value)))
 	end
+	if value ~= nil and value ~= ns.count then logChange(value) end
 	if value ~= nil then setCount(value) end
 end
 
@@ -127,12 +145,9 @@ end
 local function readBridge()
 	if waiting then return end
 	waiting = true
-	probe:SetTexture(nil)
-	C_Timer.After(0.15, function()
-		probe:SetTexture(BRIDGE_PATH)
-		waitStart = GetTime()
-		probeFrame:SetScript("OnUpdate", onProbeUpdate)
-	end)
+	probe:SetTexture(BRIDGE_PATH)
+	waitStart = GetTime()
+	probeFrame:SetScript("OnUpdate", onProbeUpdate)
 end
 
 ns.OnLogin(function()
