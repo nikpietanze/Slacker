@@ -6,7 +6,7 @@
 local clock = 0
 local timers = {}
 local frames = {}
-mock = { printed = {}, sounds = 0, root = nil, texelScale = 1, roundSizes = false }
+mock = { printed = {}, sounds = 0, root = nil, texelScale = 1, roundSizes = false, textures = {} }
 
 function GetTime() return clock end
 function time() return 1700000000 + math.floor(clock) end
@@ -28,6 +28,18 @@ function C_Timer.NewTicker(interval, fn)
 	return t
 end
 
+-- The client's cleanup: forget cached files that no texture currently uses.
+function mock.sweep()
+	if not mock.cache then return end
+	local used = {}
+	for _, f in ipairs(mock.textures) do
+		if f._file then used[f._file] = true end
+	end
+	for path in pairs(mock.cache) do
+		if not used[path] then mock.cache[path] = nil end
+	end
+end
+
 -- Advance the fake clock in 1/30 s frames, firing timers and OnUpdate.
 function mock.advance(seconds)
 	local stop = clock + seconds
@@ -42,6 +54,11 @@ function mock.advance(seconds)
 		end
 		table.sort(due, function(a, b) return a.at < b.at end)
 		for _, t in ipairs(due) do t.fn() end
+		if mock.sweepAt and clock >= mock.sweepAt then
+			mock.sweep()
+			mock.sweepIndex = mock.sweepIndex % #mock.sweepGaps + 1
+			mock.sweepAt = clock + mock.sweepGaps[mock.sweepIndex]
+		end
 		for _, f in ipairs(frames) do
 			local s = f._scripts.OnUpdate
 			if s then s(f, 1 / 30) end
@@ -74,7 +91,19 @@ mock.methods = {
 		if self._kind == "Texture" and not self._sized then
 			if self._file then
 				-- Like the client: UI units, scaled by the screen, maybe rounded.
-				local w, h = tga_size(mock.root, self._file)
+				local w, h
+				if mock.cache then
+					-- Like the client: a loaded file stays cached until a
+					-- cleanup runs while nothing uses it.
+					local hit = mock.cache[self._file]
+					if not hit then
+						hit = { tga_size(mock.root, self._file) }
+						mock.cache[self._file] = hit
+					end
+					w, h = hit[1], hit[2]
+				else
+					w, h = tga_size(mock.root, self._file)
+				end
 				if mock.brokenBridge and self._file:find("Bridge", 1, true) then w, h = 1, 1 end
 				w, h = w * mock.texelScale, h * mock.texelScale
 				if mock.roundSizes then w, h = math.floor(w + 0.5), math.floor(h + 0.5) end
@@ -117,11 +146,17 @@ mock.methods = {
 	SetChecked = function(self, v) self._checked = v end,
 	GetFrameLevel = function(self) return 1 end,
 	IsOwned = function(self, f) return false end,
-	CreateTexture = function(self) return newObject("Texture") end,
+	CreateTexture = function(self)
+		local t = newObject("Texture")
+		mock.textures[#mock.textures + 1] = t
+		return t
+	end,
 	CreateFontString = function(self) return newObject("FontString") end,
 	CreateAnimationGroup = function(self)
 		local g = newObject("AnimationGroup")
-		g.Play = function(g) g._played = (g._played or 0) + 1 end
+		g.Play = function(g) g._played = (g._played or 0) + 1; g._playing = true end
+		g.Stop = function(g) g._playing = false end
+		g.IsPlaying = function(g) return g._playing == true end
 		g.CreateAnimation = function() return newObject("Animation") end
 		return g
 	end,

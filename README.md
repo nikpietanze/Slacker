@@ -35,7 +35,7 @@ Slack desktop ──► OS notifications ──► companion (local) ──► S
 - **No Slack connection.** The companion never talks to Slack: no tokens, no OAuth, no bot, no workspace app, no admin approval.
 - **No network at all.** Nothing about Slack or WoW leaves your computer, and nothing is sent to Slack.
 
-WoW addons can't open sockets or read files, so the companion writes a tiny blank image into the addon's folder, and the image's width and height encode the count. The addon reloads it about once a second. The details are in [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md).
+WoW addons can't open sockets or read files, so the companion writes tiny blank images into the addon's folder whose widths and heights encode the count. The addon reads one about once a second, and a change shows up in about two seconds. The details are in [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md).
 
 | Your computer | What the companion watches | When the badge clears |
 |---|---|---|
@@ -66,7 +66,7 @@ The panel's **Defaults** button restores everything. To move the icon, click **M
 | `/slacker unlock` / `/slacker lock` | Drag the icon without Edit Mode, then lock it |
 | `/slacker reset` | Put the icon back in its default spot |
 | `/slacker status` | Print client, bridge and layout details for bug reports |
-| `/slacker debug` | Print every read of the companion's bridge file |
+| `/slacker debug` | Print every read of the companion's bridge files |
 
 
 ## Install
@@ -124,7 +124,7 @@ If the badge only changes after `/reload`, see [Troubleshooting](docs/TROUBLESHO
 
 ## Good to know
 
-- **Live updates rely on the game re-reading a changed texture file.** This hasn't been confirmed on a live client yet, and `demo` tells you in a minute. If the client caches the file, the badge still corrects on every `/reload`.
+- **Live updates work around the game's texture cache.** The addon cycles through 128 small bridge files so it always reads a fresh one. See [How it works](docs/HOW-IT-WORKS.md#getting-past-the-texture-cache). If a future patch changes that, the badge still corrects on every `/reload`.
 - **Clicking the icon can't switch to Slack.** Addons can't launch or focus other programs.
 - **Terms of service.** The addon uses only the public addon API, and the companion only writes a file inside the addon's own folder, much as the WeakAuras Companion does. It doesn't read game memory or send input. Blizzard hasn't commented on this kind of file feed, so use it at your own discretion.
 

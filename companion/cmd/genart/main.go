@@ -420,8 +420,11 @@ func main() {
 	write(filepath.Join(dir, "Media", "Icon.tga"), bridge.RGBATGA(size, size, render(size, icon(st))))
 	write(filepath.Join(dir, "Media", "Badge.tga"), bridge.RGBATGA(size, size, render(size, badge)))
 	write(filepath.Join(dir, "Media", "Glow.tga"), bridge.RGBATGA(size, size, render(size, glow)))
-	w, h := bridge.Dimensions(bridge.CodeOffline)
-	write(filepath.Join(dir, "Bridge", "count.tga"), bridge.BlankTGA(w, h))
+	// Every bridge slot ships as "companion offline".
+	if err := bridge.WriteCode(dir, bridge.CodeOffline); err != nil {
+		panic(err)
+	}
+	fmt.Println("wrote", bridge.Slots, "bridge slots")
 	if *logo != "" {
 		at(512)
 		write(*logo, pngBytes(toImage(512, render(512, icon(st)))))

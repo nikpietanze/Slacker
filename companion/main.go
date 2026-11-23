@@ -270,7 +270,7 @@ func doctor(cfg config) error {
 		if err != nil {
 			state = err.Error()
 		}
-		fmt.Printf("  %s\n    bridge file says: %s\n", d, state)
+		fmt.Printf("  %s\n    bridge files say: %s\n", d, state)
 	}
 	fmt.Printf("\nLog file: %s\n", defaultLogPath())
 	return nil
