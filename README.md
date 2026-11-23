@@ -10,6 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/nikpietanze/Slacker/releases/latest"><img src="https://img.shields.io/github/v/release/nikpietanze/Slacker?color=7468f2" alt="Latest release"></a>
+  <a href="https://www.curseforge.com/projects/1826739"><img src="https://img.shields.io/badge/CurseForge-Slacker-f16436?logo=curseforge" alt="Get it on CurseForge"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/nikpietanze/Slacker?color=b48352" alt="MIT license"></a>
 </p>
 
