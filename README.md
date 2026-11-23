@@ -124,7 +124,7 @@ If the badge only changes after `/reload`, see [Troubleshooting](docs/TROUBLESHO
 
 ## Good to know
 
-- **Live updates rely on the game re-reading a changed texture file.** This hasn't been confirmed on a live client yet, and `demo` tells you in a minute. If the client caches the file, the badge still corrects on every `/reload`.
+- **Live updates rely on the game re-reading a changed texture file.** Confirmed on WoW Forever 1.60.1: the badge updates within a second or two, with no `/reload`. If a future patch starts caching the file, the badge still corrects on every `/reload`, and `slacker-companion demo` shows which you're getting.
 - **Clicking the icon can't switch to Slack.** Addons can't launch or focus other programs.
 - **Terms of service.** The addon uses only the public addon API, and the companion only writes a file inside the addon's own folder, much as the WeakAuras Companion does. It doesn't read game memory or send input. Blizzard hasn't commented on this kind of file feed, so use it at your own discretion.
 

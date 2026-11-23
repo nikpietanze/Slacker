@@ -51,9 +51,16 @@ Slacker's logic and the companion are covered by tests outside the game (`make t
 | Compartment | The minimap addons menu entry opens options on left-click and tests on right-click. |
 | Commands | `/slacker`, `/slacker move`, `lock`, `unlock`, `reset`, `status` and `debug` all work, and an unknown command prints the list. |
 
-## Needs confirming on a live client
+## Confirmed on a live client
 
-- The client re-reads `Bridge\count.tga` after the probe texture is cleared and set again. This is the whole live-update mechanism. If it caches the file, only `/reload` updates the badge.
-- `Texture:GetSize()` on the unsized, single-anchor probe returns the file's native size once `IsObjectLoaded()` is true, including while its alpha is 0.
-- 8-bit grayscale TGA loads, at sizes up to 128×1024.
+On WoW Forever 1.60.1 (build 71037, macOS, Nov 2026):
+
+- The client re-reads `Bridge\count.tga` after the probe texture is cleared and set again. Replacing the file while logged in updated the badge (offline → 3 → offline) with no `/reload`.
+- `Texture:GetSize()` on the unsized, single-anchor, alpha-0 probe returns the file's exact pixel size (2×2 read as `2.00x2.00`, the 64×64 icon as `64.00x64.00`).
+- 32-bit TGA loads. An 8-bit grayscale TGA did **not** (it measured 1×1), which is why the bridge is 32-bit.
+
+## Still to confirm
+
+- Windows and Linux (Wine) clients, which should behave the same.
+- Large bridge files (up to 128×1024, for counts in the 90s and `99+`).
 - LibEditMode lists Interface 16001 as supported (PoisonSlot uses it on this client). If it errors, Slacker falls back to dragging.

@@ -16,10 +16,11 @@ local BRIDGE_PATH = [[Interface\AddOns\]] .. ADDON_NAME .. [[\Bridge\count.tga]]
 --   code 1..100  count 0..99
 --   code 101     100 or more ("99+")
 --
--- GetSize() reports UI units, not file pixels: on a Retina screen or with a
--- UI scale, a 2x2 file can measure 1x1. So every read also measures a texture
--- of known size (the 64x64 icon) and scales by that, then rounds to the
--- nearest power of two, which tolerates any leftover rounding.
+-- The file is 32-bit: an 8-bit grayscale bridge measured 1x1 on a real client
+-- (1.60.1, macOS), while 32-bit files measure exactly. As a safeguard against
+-- clients or UI scales that report sizes in other units, every read also
+-- measures a texture of known size (the 64x64 icon), scales by that, and
+-- rounds to the nearest power of two.
 ---------------------------------------------------------------------------
 local MAX_EXP = 10
 local NUM_CODES = ns.MAX_COUNT + 3

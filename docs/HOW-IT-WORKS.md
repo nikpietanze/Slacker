@@ -8,7 +8,7 @@ An addon *can* load a texture from its own folder. Once loaded, `Texture:GetSize
 
 ## The bridge file
 
-The companion writes `Interface/AddOns/Slacker/Bridge/count.tga`: a blank 8-bit grayscale TGA whose width and height encode one value.
+The companion writes `Interface/AddOns/Slacker/Bridge/count.tga`: a blank 32-bit TGA whose width and height encode one value. (An 8-bit grayscale file didn't load properly on WoW Forever.)
 
 | Value | Meaning |
 |---|---|
@@ -16,7 +16,7 @@ The companion writes `Interface/AddOns/Slacker/Bridge/count.tga`: a blank 8-bit 
 | code 1–100 | count 0–99 |
 | code 101 | 100 or more, shown as `99+` |
 
-Each code maps to a pair of exponents `(a, b)`, and the file is `2^(a+1) × 2^(b+1)` pixels. Pairs are listed diagonal by diagonal (`a+b = 0, 1, 2, …`, each at most 10) so the common small counts give tiny files. Zero notifications is a 2×4 file of 26 bytes, and anything up to 10 stays under 300 bytes. The largest files, for counts in the 90s and `99+`, are about 128 KB, which is still only a cached disk read. Dimensions are always powers of two, as WoW requires.
+Each code maps to a pair of exponents `(a, b)`, and the file is `2^(a+1) × 2^(b+1)` pixels. Pairs are listed diagonal by diagonal (`a+b = 0, 1, 2, …`, each at most 10) so the common small counts give tiny files. Zero notifications is a 2×4 file of 26 bytes, and anything up to 10 stays under 300 bytes. The largest files, for counts in the 90s and `99+`, are about 512 KB, which is still only a cached disk read. Dimensions are always powers of two, as WoW requires.
 
 The table is built identically in [`codec.go`](../companion/internal/bridge/codec.go) and [`Bridge.lua`](../Bridge.lua). [`addon_test.go`](../companion/internal/addontest/addon_test.go) loads the real Lua and checks every code decodes the same way in both.
 
@@ -28,7 +28,9 @@ About once a second ([`Bridge.lua`](../Bridge.lua)), the addon:
 
 1. Clears its hidden probe texture (`SetTexture(nil)`), so the client can drop its cached copy.
 2. 0.15 s later, sets the texture to the bridge file again.
-3. Waits for `IsObjectLoaded()`, reads `GetSize()`, and decodes the count.
+3. Waits for `IsObjectLoaded()`, reads `GetSize()`, divides by the measured size of its own 64×64 icon (a safeguard against UI scaling), rounds to the nearest power of two, and decodes the count.
+
+Confirmed on WoW Forever 1.60.1 (build 71037, macOS): replacing the file while you're logged in updates the badge within about a second, with no `/reload`.
 
 A size that isn't a valid bridge value is ignored, so a half-loaded texture never flickers the badge. The work is one tiny texture load per second, no `OnUpdate` running between reads, and no combat-restricted API.
 
