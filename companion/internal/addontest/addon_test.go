@@ -248,7 +248,7 @@ func TestCompanionMissingHelp(t *testing.T) {
 		mock.advance(12)
 		local reminded
 		for _, line in ipairs(mock.printed) do
-			if line:find("/slack setup", 1, true) then reminded = true end
+			if line:find("/slacker setup", 1, true) then reminded = true end
 		end
 		assert(reminded, "login reminder when the companion isn't running")
 		mock.popup = nil
@@ -266,7 +266,7 @@ func TestNoReminderWhenConnected(t *testing.T) {
 	run(t, L, `
 		mock.advance(12)
 		for _, line in ipairs(mock.printed) do
-			assert(not line:find("/slack setup", 1, true), "no reminder while connected")
+			assert(not line:find("/slacker setup", 1, true), "no reminder while connected")
 		end
 		mock.popup = nil
 		ns.button._scripts.OnClick(ns.button, "LeftButton")

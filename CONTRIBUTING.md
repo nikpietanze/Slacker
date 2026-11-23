@@ -38,7 +38,7 @@ make art     # redraw the addon textures, logo, tray icons and app icons
 
 `make art` draws the default `round` style. To try the others, run `go run ./cmd/genart -style flat ..` (or `glass`) from `companion/`.
 
-To try it in game, symlink the repo into `_forever_/Interface/AddOns/Slacker`. Then run `go run . demo --wow-dir "<WoW folder>"` from `companion/` and turn on `/slack debug`. A bare `go run .` with no arguments behaves like a double-click: it installs itself and turns on start at login. Use `go run . run` while developing. The companion rewrites `Bridge/count.tga` while it runs. Don't commit that file unless it's the 2×2 placeholder (`go run . set off` puts it back).
+To try it in game, symlink the repo into `_forever_/Interface/AddOns/Slacker`. Then run `go run . demo --wow-dir "<WoW folder>"` from `companion/` and turn on `/slacker debug`. A bare `go run .` with no arguments behaves like a double-click: it installs itself and turns on start at login. Use `go run . run` while developing. The companion rewrites `Bridge/count.tga` while it runs. Don't commit that file unless it's the 2×2 placeholder (`go run . set off` puts it back).
 
 Before a release, go through [docs/TESTING.md](docs/TESTING.md).
 

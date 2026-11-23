@@ -191,7 +191,7 @@ ns.OnLogin(function()
 	C_Timer.After(12, function()
 		if ns.count == false and ns.db.remindCompanion then
 			ns.Print("can't see Slack yet because its companion app isn't running. "
-				.. "Click the Slacker icon or type |cffffffff/slack setup|r to get it.")
+				.. "Click the Slacker icon or type |cffffffff/slacker setup|r to get it.")
 		end
 	end)
 end)
@@ -210,8 +210,7 @@ local commands = {
 	end,
 }
 
-SLASH_SLACKER1 = "/slack"
-SLASH_SLACKER2 = "/slacker"
+SLASH_SLACKER1 = "/slacker"
 SlashCmdList.SLACKER = function(input)
 	local command = strtrim((input or ""):lower())
 	if command == "" or command == "options" or command == "config" then
@@ -219,6 +218,6 @@ SlashCmdList.SLACKER = function(input)
 	elseif commands[command] then
 		commands[command]()
 	else
-		ns.Print("Commands: /slack [options | setup | test | move | unlock | lock | reset | status | debug]")
+		ns.Print("Commands: /slacker [options | setup | test | move | unlock | lock | reset | status | debug]")
 	end
 end

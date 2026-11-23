@@ -45,7 +45,7 @@ WoW addons can't open sockets or read files, so the companion writes a tiny blan
 
 ## Options
 
-Everything is under **Esc → Options → AddOns → Slacker** (or type `/slack`, right-click the icon, or click Slacker in the minimap's addons menu):
+Everything is under **Esc → Options → AddOns → Slacker** (or type `/slacker`, right-click the icon, or click Slacker in the minimap's addons menu):
 
 | Section | Settings |
 |---|---|
@@ -53,22 +53,21 @@ Everything is under **Esc → Options → AddOns → Slacker** (or type `/slack`
 | New notifications | Flash, sound (built-in or your SharedMedia sounds), plus Test |
 | Companion app | Remind me when it isn't running, plus Get it (shows the download link) |
 
-The panel's **Defaults** button restores everything. To move the icon, click **Move** (or type `/slack move`) to open Edit Mode, then drag it. Select it there to change its size and opacity. While it's unlocked, you can also just drag it.
+The panel's **Defaults** button restores everything. To move the icon, click **Move** (or type `/slacker move`) to open Edit Mode, then drag it. Select it there to change its size and opacity. While it's unlocked, you can also just drag it.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `/slack` | Open the options |
-| `/slack setup` | Show the companion app's download link |
-| `/slack test` | Show sample counts on the badge for a few seconds |
-| `/slack move` | Open Edit Mode to move the icon |
-| `/slack unlock` / `/slack lock` | Drag the icon without Edit Mode, then lock it |
-| `/slack reset` | Put the icon back in its default spot |
-| `/slack status` | Print client, bridge and layout details for bug reports |
-| `/slack debug` | Print every read of the companion's bridge file |
+| `/slacker` | Open the options |
+| `/slacker setup` | Show the companion app's download link |
+| `/slacker test` | Show sample counts on the badge for a few seconds |
+| `/slacker move` | Open Edit Mode to move the icon |
+| `/slacker unlock` / `/slacker lock` | Drag the icon without Edit Mode, then lock it |
+| `/slacker reset` | Put the icon back in its default spot |
+| `/slacker status` | Print client, bridge and layout details for bug reports |
+| `/slacker debug` | Print every read of the companion's bridge file |
 
-`/slacker` works too.
 
 ## Install
 
@@ -94,7 +93,7 @@ WoW addons can't see other programs, so Slacker needs a small free app on your c
 
 That's it. It installs itself, starts by itself when you log in, and puts a speech bubble in your system tray (Windows, Linux) or menu bar (macOS). The bubble's menu shows your Slack count, whether it found the WoW addon, a **Start when I log in** switch, and **Quit**. It finds WoW and the addon on its own, in either order.
 
-Forgot this step? In game, the Slacker icon says the companion isn't running. Click it for the download link (or type `/slack setup`).
+Forgot this step? In game, the Slacker icon says the companion isn't running. Click it for the download link (or type `/slacker setup`).
 
 **One Slack setting to check:**
 
@@ -131,7 +130,7 @@ If the badge only changes after `/reload`, see [Troubleshooting](docs/TROUBLESHO
 
 ## Bugs and ideas
 
-Open an [issue](https://github.com/nikpietanze/Slacker/issues). For bugs, include the output of `/slack status` and `slacker-companion doctor`, plus any Lua error text (BugSack makes this easy). Pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Open an [issue](https://github.com/nikpietanze/Slacker/issues). For bugs, include the output of `/slacker status` and `slacker-companion doctor`, plus any Lua error text (BugSack makes this easy). Pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

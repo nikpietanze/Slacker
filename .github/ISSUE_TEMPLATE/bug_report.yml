@@ -20,7 +20,7 @@ body:
     id: status
     attributes:
       label: Slacker status
-      description: Paste the output of `/slack status`.
+      description: Paste the output of `/slacker status`.
       render: text
   - type: dropdown
     id: os
