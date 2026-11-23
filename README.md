@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/logo/logo.png" alt="Slacker logo" width="160">
+  <img src="docs/logo/logo-curseforge.png" alt="Slacker logo" width="160">
 </p>
 
 <h1 align="center">Slacker</h1>

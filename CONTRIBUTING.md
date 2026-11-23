@@ -20,6 +20,7 @@ Thanks for helping out. A few ground rules keep Slacker small and safe to run:
 | `companion/internal/source/` | One notification watcher per OS |
 | `companion/internal/bridge/` | Count-to-texture-size codec, file writing, and addon folder discovery |
 | `companion/internal/addontest/` | Runs the addon's Lua against a mocked client |
+| `docs/logo/logo-curseforge.png` | The project logo (CurseForge avatar, README header): the in-game bubble in a gold minimap-button frame. Edited by hand, unlike the generated art. |
 | `companion/cmd/genart/` | Draws `Media/*.tga`, `docs/logo/logo.png`, the tray icons in `companion/assets/` and the Windows `.exe` icon, all from code |
 | `scripts/build-macos.sh` | Builds and zips `Slacker Companion.app` |
 
