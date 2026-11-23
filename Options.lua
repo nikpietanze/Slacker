@@ -107,6 +107,8 @@ ns.OnLoad(function()
 	header("New notifications")
 
 	checkbox("flash", "Flash", "Flash the icon briefly when a new Slack notification arrives.")
+	checkbox("pulse", "Keep pulsing until read",
+		"Keep the icon gently pulsing while you have unread Slack notifications.", apply)
 	dropdown("sound", "Sound", "none", soundChoices,
 		"Play a sound when a new Slack notification arrives. Choosing a sound plays it.", function()
 			ns.PlaySound(ns.db.sound)

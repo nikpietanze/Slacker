@@ -8,7 +8,7 @@ local _, ns = ...
 local LEM = LibStub and LibStub("LibEditMode", true)
 local BADGE_HEIGHT = 16 -- At a 32px icon; scales with icon size and badge size.
 
-local button, icon, glow, glowAnim
+local button, icon, glow, glowAnim, halo, haloAnim
 local badge, badgeText, badgeLeft, badgeMid, badgeRight
 local layoutKey = "default"
 local editing = false
@@ -142,6 +142,12 @@ function ns.Refresh()
 	if editing then count = 3 end
 	local active = type(count) == "number" and count > 0
 	local opacity = ns.db.opacity / 100
+	-- A slow breathing glow while anything is unread, so it's hard to miss.
+	if active and ns.db.pulse and not editing then
+		if not haloAnim:IsPlaying() then haloAnim:Play() end
+	elseif haloAnim:IsPlaying() then
+		haloAnim:Stop()
+	end
 	icon:SetDesaturated(not active)
 	if active then
 		button:SetAlpha(opacity)
@@ -160,6 +166,7 @@ function ns.ApplySettings()
 	local size = ns.db.iconSize
 	button:SetSize(size, size)
 	glow:SetSize(size * 1.9, size * 1.9)
+	halo:SetSize(size * 1.7, size * 1.7)
 	-- The badge is designed for a 32px icon.
 	badge:SetScale(size / 32 * ns.db.badgeScale / 100)
 	badge:ClearAllPoints()
@@ -257,6 +264,21 @@ ns.OnLogin(function()
 		if self.loops < 3 then self:Play() end
 	end)
 
+	halo = button:CreateTexture(nil, "BACKGROUND", nil, -1)
+	halo:SetTexture(ns.MEDIA .. "Glow")
+	halo:SetBlendMode("ADD")
+	halo:SetVertexColor(1, 0.3, 0.3)
+	halo:SetPoint("CENTER", 0, 1)
+	halo:SetAlpha(0)
+
+	haloAnim = halo:CreateAnimationGroup()
+	haloAnim:SetLooping("BOUNCE")
+	local breathe = haloAnim:CreateAnimation("Alpha")
+	breathe:SetFromAlpha(0.05)
+	breathe:SetToAlpha(0.55)
+	breathe:SetDuration(1.2)
+	if breathe.SetSmoothing then breathe:SetSmoothing("IN_OUT") end
+
 	icon = button:CreateTexture(nil, "ARTWORK")
 	icon:SetTexture(ns.MEDIA .. "Icon")
 	icon:SetAllPoints()
@@ -293,6 +315,6 @@ ns.OnLogin(function()
 	end
 	applyPosition()
 	ns.button = button
-	ns.ui = { badge = badge, badgeText = badgeText, icon = icon, glowAnim = glowAnim }
+	ns.ui = { badge = badge, badgeText = badgeText, icon = icon, glowAnim = glowAnim, haloAnim = haloAnim }
 	ns.ApplySettings()
 end)

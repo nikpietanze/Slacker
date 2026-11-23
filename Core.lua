@@ -19,7 +19,8 @@ local DEFAULTS = {
 	opacity = 100, -- Percent.
 	positions = {}, -- Icon position per Edit Mode layout, plus "default".
 	-- Alerts
-	flash = true,
+	flash = true, -- A quick flash when a new notification arrives.
+	pulse = true, -- Keep a gentle pulse going until they're read.
 	sound = "none", -- "none", "kit:<SOUNDKIT key>" or "lsm:<LibSharedMedia name>"
 	-- Companion
 	remindCompanion = true, -- Say so in chat when the companion isn't running.

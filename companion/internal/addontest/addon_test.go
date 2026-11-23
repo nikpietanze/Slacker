@@ -172,6 +172,7 @@ func TestBadgeFollowsCompanion(t *testing.T) {
 			{"iconDesaturated(ns)", s.desat},
 			{"flashes(ns)", s.flashes},
 			{"mock.sounds", s.sounds},
+			{"ns.ui.haloAnim:IsPlaying()", s.shown}, // pulses exactly while the badge shows
 		} {
 			if got := eval(t, L, c.expr); got != c.want {
 				t.Errorf("count %d: %s = %s, want %s", s.count, c.expr, got, c.want)
@@ -222,7 +223,7 @@ func TestSettingsAndPosition(t *testing.T) {
 	L, _ := newAddon(t)
 	run(t, L, `
 		-- every option is registered with the native settings panel
-		for _, key in ipairs({ "locked", "tooltip", "iconSize", "badgeScale", "opacity", "flash", "sound" }) do
+		for _, key in ipairs({ "locked", "tooltip", "iconSize", "badgeScale", "opacity", "flash", "pulse", "sound" }) do
 			assert(mock.settings[key], key .. " not registered")
 		end
 		assert(#mock.lastDropdown >= 5, "sound dropdown lists None plus built-in sounds")
@@ -316,4 +317,19 @@ func TestUnreadableBridgeIsReported(t *testing.T) {
 		assert(ns.count == nil, "nothing decodes")
 		assert(reported, "an unreadable bridge is reported in chat")
 	`)
+}
+
+func TestPulseSetting(t *testing.T) {
+	L, dir := newAddon(t)
+	must(t, bridge.WriteCode(dir, bridge.CodeForCount(4)))
+	run(t, L, `
+		mock.advance(1.5)
+		assert(ns.ui.haloAnim:IsPlaying(), "pulses while unread")
+		mock.settings.pulse:SetValue(false)
+		assert(not ns.ui.haloAnim:IsPlaying(), "turning the setting off stops it")
+		mock.settings.pulse:SetValue(true)
+		assert(ns.ui.haloAnim:IsPlaying(), "turning it back on resumes")
+	`)
+	must(t, bridge.WriteCode(dir, bridge.CodeForCount(0)))
+	run(t, L, `mock.advance(1.5); assert(not ns.ui.haloAnim:IsPlaying(), "stops once read")`)
 }

@@ -121,7 +121,9 @@ mock.methods = {
 	CreateFontString = function(self) return newObject("FontString") end,
 	CreateAnimationGroup = function(self)
 		local g = newObject("AnimationGroup")
-		g.Play = function(g) g._played = (g._played or 0) + 1 end
+		g.Play = function(g) g._played = (g._played or 0) + 1; g._playing = true end
+		g.Stop = function(g) g._playing = false end
+		g.IsPlaying = function(g) return g._playing == true end
 		g.CreateAnimation = function() return newObject("Animation") end
 		return g
 	end,
