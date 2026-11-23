@@ -90,6 +90,17 @@ func copyTree(src, dst string) error {
 	})
 }
 
+// terminateInstalled asks any installed copy to quit; it writes "offline"
+// to the addon on the way out.
+// Only copies in an Applications folder: the new copy that's doing the
+// update runs from somewhere else (usually Downloads).
+func terminateInstalled() {
+	home, _ := os.UserHomeDir()
+	for _, dir := range []string{filepath.Join(home, "Applications"), "/Applications"} {
+		exec.Command("pkill", "-TERM", "-f", filepath.Join(dir, bundleName, "Contents", "MacOS")+"/").Run()
+	}
+}
+
 func startDetached(exe string, args ...string) error {
 	if bundle, ok := bundleOf(exe); ok {
 		return exec.Command("open", append([]string{"-n", bundle, "--args"}, args...)...).Run()
