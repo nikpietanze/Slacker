@@ -56,7 +56,7 @@ function ns.Move()
 		ShowUIPanel(EditModeManagerFrame)
 	else
 		ns.SetOption("locked", false)
-		ns.Print("Drag the icon to move it, then lock it with /slack lock.")
+		ns.Print("Drag the icon to move it, then lock it with /slacker lock.")
 	end
 end
 

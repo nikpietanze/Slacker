@@ -22,13 +22,13 @@ The companion only reads what Slack already shows on your computer. No Slack log
 
 | Command | What it does |
 |---|---|
-| `/slack` | Options |
-| `/slack setup` | Companion download link |
-| `/slack test` | Preview the badge |
-| `/slack move` | Move the icon |
-| `/slack reset` | Reset its position |
-| `/slack status` | Info for bug reports |
+| `/slacker` | Options |
+| `/slacker setup` | Companion download link |
+| `/slacker test` | Preview the badge |
+| `/slacker move` | Move the icon |
+| `/slacker reset` | Reset its position |
+| `/slacker status` | Info for bug reports |
 
 ## Bugs and ideas
 
-[GitHub Issues](https://github.com/nikpietanze/Slacker/issues). Include `/slack status` and any Lua errors.
+[GitHub Issues](https://github.com/nikpietanze/Slacker/issues). Include `/slacker status` and any Lua errors.
