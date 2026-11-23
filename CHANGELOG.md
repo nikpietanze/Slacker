@@ -11,3 +11,5 @@ First release.
 - Addon compartment entry: left-click for options, right-click to test the badge.
 - `/slack status` prints details for bug reports.
 - Companion app for Windows, macOS and Linux that mirrors Slack's desktop notifications into the addon. It works locally only, with no Slack login.
+- Double-click the companion and it installs itself, starts at login, and shows a tray / menu bar icon with your Slack count, the addon's status, a start-at-login switch and Quit.
+- If the companion isn't running, the icon says so, clicking it shows the download link, and a one-time chat reminder after login points you there (`/slack setup`).

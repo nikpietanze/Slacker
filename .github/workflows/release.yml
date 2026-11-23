@@ -37,10 +37,28 @@ jobs:
       - name: Test
         run: make test
 
-      # Adds the companion binaries to the release the packager just made.
-      - name: Build and attach companion binaries
+      # Adds the Windows and Linux companions to the release the packager made.
+      - name: Build and attach
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           make build VERSION=${{ github.ref_name }}
           gh release upload "${{ github.ref_name }}" dist/* --clobber
+
+  macos:
+    needs: package
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: companion/go.mod
+          cache-dependency-path: companion/go.sum
+
+      # The menu bar icon needs cgo, so the macOS app is built on a Mac.
+      - name: Build and attach Slacker Companion.app
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          scripts/build-macos.sh ${{ github.ref_name }}
+          gh release upload "${{ github.ref_name }}" dist/Slacker-Companion-macOS.zip --clobber

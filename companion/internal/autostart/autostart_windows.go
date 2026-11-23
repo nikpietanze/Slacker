@@ -37,3 +37,14 @@ func Disable() error {
 	}
 	return nil
 }
+
+// IsEnabled reports whether the login entry exists.
+func IsEnabled() bool {
+	k, err := registry.OpenKey(registry.CURRENT_USER, runKey, registry.QUERY_VALUE)
+	if err != nil {
+		return false
+	}
+	defer k.Close()
+	_, _, err = k.GetStringValue(Name)
+	return err == nil
+}

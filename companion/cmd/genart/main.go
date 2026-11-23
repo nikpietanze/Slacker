@@ -9,6 +9,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/binary"
 	"flag"
 	"fmt"
 	"image"
@@ -19,6 +21,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/tc-hib/winres"
 	"golang.org/x/image/vector"
 
 	"slacker/companion/internal/bridge"
@@ -280,35 +283,151 @@ func write(path string, data []byte) {
 	fmt.Println("wrote", path)
 }
 
+// at sets the resolution globals for an n x n render.
+func at(n int) {
+	px = float64(size) / float64(n)
+	maskSS = math.Max(8, 2*float64(n)/size)
+}
+
+func toImage(n int, pix []byte) *image.NRGBA {
+	img := image.NewNRGBA(image.Rect(0, 0, n, n))
+	copy(img.Pix, pix)
+	return img
+}
+
+func pngBytes(img image.Image) []byte {
+	var b bytes.Buffer
+	if err := png.Encode(&b, img); err != nil {
+		panic(err)
+	}
+	return b.Bytes()
+}
+
+// unreadDot adds a small red dot to the top right of an icon.
+func unreadDot(shade func(x, y float64) rgba) func(x, y float64) rgba {
+	return func(x, y float64) rgba {
+		c := shade(x, y)
+		d := sdCircle(x, y, 50, 14, 12)
+		c = over(c, rgba{0.07, 0.05, 0.12, 0.9 * fill(d)})
+		return over(c, rgba{0.937, 0.231, 0.239, fill(d + 2.5)})
+	}
+}
+
+// template is the macOS menu bar version: a black bubble with the S cut out.
+func template(st style) func(x, y float64) rgba {
+	mask := glyphMask(st)
+	return func(x, y float64) rgba {
+		a := fill(st.shape(x, y))
+		g := float64(mask.AlphaAt(int(x*maskSS), int(y*maskSS)).A) / 255
+		return rgba{0, 0, 0, a * (1 - g)}
+	}
+}
+
+// ico packs PNG images into a Windows .ico (PNG entries, Vista and later).
+func ico(images map[int][]byte, sizes []int) []byte {
+	var b bytes.Buffer
+	binary.Write(&b, binary.LittleEndian, []uint16{0, 1, uint16(len(sizes))})
+	offset := 6 + 16*len(sizes)
+	for _, n := range sizes {
+		dim := byte(n)
+		if n >= 256 {
+			dim = 0
+		}
+		b.Write([]byte{dim, dim, 0, 0})
+		binary.Write(&b, binary.LittleEndian, []uint16{1, 32})
+		binary.Write(&b, binary.LittleEndian, []uint32{uint32(len(images[n])), uint32(offset)})
+		offset += len(images[n])
+	}
+	for _, n := range sizes {
+		b.Write(images[n])
+	}
+	return b.Bytes()
+}
+
+// companionArt writes the tray icons, the macOS app icon set and the Windows
+// .exe icon resources into the companion folder.
+func companionArt(st style, companionDir string) {
+	flat := st
+	flat.shadow = 0 // shadows turn to mud at tray sizes
+	assets := filepath.Join(companionDir, "assets")
+
+	sizes := []int{16, 20, 24, 32, 40, 48, 64}
+	normal, unread := map[int][]byte{}, map[int][]byte{}
+	for _, n := range sizes {
+		at(n)
+		normal[n] = pngBytes(toImage(n, render(n, icon(flat))))
+		at(n)
+		unread[n] = pngBytes(toImage(n, render(n, unreadDot(icon(flat)))))
+	}
+	write(filepath.Join(assets, "tray.ico"), ico(normal, sizes))
+	write(filepath.Join(assets, "tray-unread.ico"), ico(unread, sizes))
+	write(filepath.Join(assets, "tray.png"), normal[64])
+	write(filepath.Join(assets, "tray-unread.png"), unread[64])
+	at(36)
+	write(filepath.Join(assets, "tray-template.png"), pngBytes(toImage(36, render(36, template(st)))))
+
+	// macOS app icon: icon_NxN.png and @2x variants for iconutil.
+	iconset := filepath.Join(assets, "Slacker.iconset")
+	for _, n := range []int{16, 32, 128, 256, 512} {
+		for _, scale := range []int{1, 2} {
+			name := fmt.Sprintf("icon_%dx%d.png", n, n)
+			if scale == 2 {
+				name = fmt.Sprintf("icon_%dx%d@2x.png", n, n)
+			}
+			at(n * scale)
+			write(filepath.Join(iconset, name), pngBytes(toImage(n*scale, render(n*scale, icon(st)))))
+		}
+	}
+
+	// Windows .exe icon and manifest, linked automatically by "go build".
+	var imgs []image.Image
+	for _, n := range []int{16, 24, 32, 48, 64, 128, 256} {
+		at(n)
+		imgs = append(imgs, toImage(n, render(n, icon(st))))
+	}
+	appIcon, err := winres.NewIconFromImages(imgs)
+	if err != nil {
+		panic(err)
+	}
+	rs := &winres.ResourceSet{}
+	rs.SetIcon(winres.Name("APPICON"), appIcon)
+	rs.SetManifest(winres.AppManifest{
+		Description:         "Slacker companion",
+		DPIAwareness:        winres.DPIPerMonitorV2,
+		UseCommonControlsV6: true,
+	})
+	for arch, a := range map[string]winres.Arch{"amd64": winres.ArchAMD64, "arm64": winres.ArchARM64} {
+		var b bytes.Buffer
+		if err := rs.WriteObject(&b, a); err != nil {
+			panic(err)
+		}
+		write(filepath.Join(companionDir, "rsrc_windows_"+arch+".syso"), b.Bytes())
+	}
+	at(size)
+}
+
 func main() {
 	styleName := flag.String("style", "round", "icon style: round, flat or glass")
 	logo := flag.String("logo", "", "also write a large PNG of the icon to this path")
+	companion := flag.String("companion", "", "also write the companion's tray and app icons into this folder")
 	flag.Parse()
 	st, ok := styles[*styleName]
 	if flag.NArg() != 1 || !ok {
-		fmt.Fprintln(os.Stderr, "usage: genart [-style round|flat|glass] <addon folder (the repo root)>")
+		fmt.Fprintln(os.Stderr, "usage: genart [-style round|flat|glass] [-logo file.png] [-companion dir] <addon folder (the repo root)>")
 		os.Exit(2)
 	}
 	dir := flag.Arg(0)
 	write(filepath.Join(dir, "Media", "Icon.tga"), bridge.RGBATGA(size, size, render(size, icon(st))))
 	write(filepath.Join(dir, "Media", "Badge.tga"), bridge.RGBATGA(size, size, render(size, badge)))
 	write(filepath.Join(dir, "Media", "Glow.tga"), bridge.RGBATGA(size, size, render(size, glow)))
-	if *logo != "" {
-		const n = 512
-		px, maskSS = float64(size)/n, n/size*2
-		pix := render(n, icon(st))
-		img := image.NewNRGBA(image.Rect(0, 0, n, n))
-		copy(img.Pix, pix)
-		f, err := os.Create(*logo)
-		if err != nil {
-			panic(err)
-		}
-		if err := png.Encode(f, img); err != nil {
-			panic(err)
-		}
-		f.Close()
-		fmt.Println("wrote", *logo)
-	}
 	w, h := bridge.Dimensions(bridge.CodeOffline)
 	write(filepath.Join(dir, "Bridge", "count.tga"), bridge.GrayTGA(w, h))
+	if *logo != "" {
+		at(512)
+		write(*logo, pngBytes(toImage(512, render(512, icon(st)))))
+		at(size)
+	}
+	if *companion != "" {
+		companionArt(st, *companion)
+	}
 }

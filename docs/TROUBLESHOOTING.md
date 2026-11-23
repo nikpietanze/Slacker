@@ -10,9 +10,24 @@ It shows the notification source, what it can see right now, which addon folders
 
 In game, `/slack status` shows what the addon last read, and `/slack debug` prints every bridge read to chat.
 
+## I don't see the speech bubble in my tray or menu bar
+
+- **Windows:** it may be in the overflow area. Click the **^** arrow next to the clock. Drag it onto the taskbar to keep it visible.
+- **macOS:** a crowded menu bar can hide icons behind the notch. Quit an app or two, or use a menu bar manager.
+- **Linux:** GNOME needs the *AppIndicator and KStatusNotifierItem Support* extension (Ubuntu ships it). Slacker works the same without the icon.
+- **Not running at all:** open the app again. It also starts by itself when you log in.
+
+## Windows: "Windows protected your PC"
+
+The download isn't code-signed yet, so SmartScreen doesn't recognize it. Click **More info → Run anyway**. You only see this once.
+
+## macOS: "Slacker Companion can't be opened" or "Apple could not verify…"
+
+The app isn't notarized by Apple yet. Open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**. You only need to do this once.
+
 ## The icon says "companion not running"
 
-- The companion isn't running, or it can't find your addon folder. Run `doctor`.
+- The companion isn't running, or it can't find your addon folder. Open its tray / menu bar menu: it says whether it found the WoW addon. For details, run `doctor`.
 - It writes to every `World of Warcraft/_*_/Interface/AddOns/Slacker` it finds. If your WoW is somewhere unusual, pass `--wow-dir` (the folder that contains `_forever_`) or `--addon-dir` (the `Slacker` folder itself). If you use autostart, run `autostart on` again with the same flags.
 - If you installed the addon after starting WoW, `/reload` once.
 
@@ -20,7 +35,7 @@ In game, `/slack status` shows what the addon last read, and `/slack debug` prin
 
 The live bridge relies on the game client re-reading `Bridge/count.tga` after the addon releases it. Check:
 
-1. Run `slacker-companion demo` with the companion stopped, and watch the icon.
+1. Quit the companion from its tray / menu bar icon, run `slacker-companion demo` from a terminal, and watch the in-game icon.
 2. In game, `/slack debug` prints `bridge WxH -> value` every second.
    - If the size never changes while `demo` runs, the client is serving a cached copy. Please [open an issue](https://github.com/nikpietanze/Slacker/issues) with your client version (`/dump GetBuildInfo()`) and OS.
    - If it prints `0x0`, the texture isn't loading. Make sure `Bridge/count.tga` exists in the addon folder; it ships with the addon.
@@ -56,8 +71,10 @@ Tick *Load out of date AddOns* on the character-select AddOns screen, or set the
 
 ## Uninstall
 
-```
-slacker-companion autostart off
-```
+Turn off **Start when I log in** in the companion's menu, choose **Quit Slacker**, then delete the app:
 
-Then delete the binary and the `Slacker` addon folder. The settings live in `WTF/Account/<account>/SavedVariables/Slacker.lua`.
+- **Windows:** `%LOCALAPPDATA%\Programs\Slacker`
+- **macOS:** `~/Applications/Slacker Companion.app`
+- **Linux:** `~/.local/bin/slacker-companion`
+
+Then delete the `Slacker` addon folder. The settings live in `WTF/Account/<account>/SavedVariables/Slacker.lua`.

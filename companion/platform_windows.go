@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"syscall"
 	"unsafe"
@@ -17,7 +16,7 @@ var (
 	user32        = windows.NewLazySystemDLL("user32.dll")
 	attachConsole = kernel32.NewProc("AttachConsole")
 	getConsoleWnd = kernel32.NewProc("GetConsoleWindow")
-	messageBox    = user32.NewProc("MessageBoxW")
+	messageBox_   = user32.NewProc("MessageBoxW")
 	console       bool
 )
 
@@ -47,24 +46,12 @@ func singleInstance() (func(), bool) {
 	return func() { windows.CloseHandle(h) }, true
 }
 
-func msgBox(text string, flags uintptr) {
+func messageBox(title, text string, isError bool) {
+	flags := uintptr(0x40) // MB_ICONINFORMATION
+	if isError {
+		flags = 0x10 // MB_ICONERROR
+	}
 	t, _ := syscall.UTF16PtrFromString(text)
-	c, _ := syscall.UTF16PtrFromString("Slacker Companion")
-	messageBox.Call(0, uintptr(unsafe.Pointer(t)), uintptr(unsafe.Pointer(c)), flags)
-}
-
-// notifyStarted confirms a double-click launch, since there is no window.
-func notifyStarted(dirs int) {
-	if console {
-		return
-	}
-	go msgBox(fmt.Sprintf("The companion is now running in the background and bridging to %d addon folder(s).\n\n"+
-		"To start it automatically at login, run:\n  slacker-companion autostart on\n\n"+
-		"To stop it, end \"slacker-companion\" in Task Manager.", dirs), 0x40 /* MB_ICONINFORMATION */)
-}
-
-func showError(err error) {
-	if !console {
-		msgBox(err.Error(), 0x10 /* MB_ICONERROR */)
-	}
+	c, _ := syscall.UTF16PtrFromString(title)
+	messageBox_.Call(0, uintptr(unsafe.Pointer(t)), uintptr(unsafe.Pointer(c)), flags|0x10000 /* MB_SETFOREGROUND */)
 }

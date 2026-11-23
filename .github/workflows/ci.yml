@@ -29,3 +29,29 @@ jobs:
       - name: Test
         working-directory: companion
         run: go test ./...
+
+  # Builds the companion downloads so a PR can be tried without a release.
+  build:
+    needs: test
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: companion/go.mod
+          cache-dependency-path: companion/go.sum
+      - name: Build Windows and Linux
+        if: runner.os == 'Linux'
+        run: make build VERSION=ci-${{ github.sha }}
+      - name: Build macOS app
+        if: runner.os == 'macOS'
+        run: scripts/build-macos.sh ci-${{ github.sha }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: companion-${{ runner.os }}
+          path: |
+            dist/Slacker-Companion-*
+          if-no-files-found: error

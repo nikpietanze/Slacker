@@ -4,11 +4,24 @@ Run through this list before tagging a release. Note your client build from `/sl
 
 Slacker's logic and the companion are covered by tests outside the game (`make test`). Live texture reloading, Edit Mode, the options panel and layout still need a real client.
 
+## Companion install (each OS)
+
+| Check | Expected result |
+|---|---|
+| First open | Opening the download installs it (Windows: `%LOCALAPPDATA%\Programs\Slacker`, macOS: `~/Applications`, Linux: `~/.local/bin`), shows a welcome message, and the speech bubble appears in the tray / menu bar. |
+| Welcome | The welcome message says whether it found the WoW addon. |
+| Menu | It shows the Slack count, "WoW: connected…" (or "addon not found. Get it…", which opens the install page), **Start when I log in** (checked), **Help** and **Quit Slacker**. |
+| Count | A Slack DM updates the menu's count. Windows/Linux: the icon gets a red dot. macOS: the count appears beside the icon. |
+| Login | After logging out and back in, it's running again. Unchecking **Start when I log in** stops that. |
+| Open again | Opening the download again while it runs says it's already running. |
+| Install order | Install the companion before the addon. Within about 10 seconds of installing the addon, the menu says connected. |
+| Quit | **Quit Slacker** removes the icon, and the in-game icon dims to "companion not running". |
+
 ## Bridge
 
 | Check | Expected result |
 |---|---|
-| Offline | With the companion stopped, the icon is dim and the tooltip says the companion isn't running. |
+| Offline | With the companion stopped, the icon is dim and the tooltip says the companion app is needed. Clicking it shows a popup with the download link already selected. About 12 seconds after login, chat says so once. Turning off **Remind me when it isn't running** stops the chat line. |
 | Live updates | Run `slacker-companion demo`. The badge steps through 1, 2, 3, 7, 12, 42, 99, 99+ **without** `/reload`. With `/slack debug` on, each read prints the new size. |
 | Real notification | Start the companion and minimize Slack. A DM from someone shows a badge within about two seconds. |
 | Clear | Focus Slack (Windows) or read the message (macOS, Linux). The badge goes away. |

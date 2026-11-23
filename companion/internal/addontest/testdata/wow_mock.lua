@@ -216,5 +216,24 @@ function Settings.CreateDropdown(_, _, options) mock.lastDropdown = options() re
 function Settings.RegisterAddOnCategory() end
 function Settings.OpenToCategory(id) mock.openedOptions = id end
 MinimalSliderWithSteppersMixin = { Label = { Right = 1 } }
+CLOSE = "Close"
+StaticPopupDialogs = {}
+function StaticPopup_Show(which)
+	mock.popup = which
+	local info = StaticPopupDialogs[which]
+	local box = newObject("EditBox")
+	box.HighlightText = function() end
+	box.SetFocus = function() end
+	local dialog = newObject("Frame")
+	dialog.editBox = box
+	box.GetParent = function() return dialog end
+	if info.OnShow then info.OnShow(dialog) end
+	mock.popupText = box:GetText()
+	box:SetText("oops")
+	if info.EditBoxOnTextChanged then info.EditBoxOnTextChanged(box) end
+	mock.popupTextAfterTyping = box:GetText()
+	if info.EditBoxOnEscapePressed then info.EditBoxOnEscapePressed(box) end
+	mock.popupHidden = not dialog:IsShown()
+end
 function CreateSettingsListSectionHeaderInitializer() return {} end
 function CreateSettingsButtonInitializer(name, _, onClick) mock.buttons[name] = onClick return {} end

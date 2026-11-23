@@ -23,7 +23,7 @@ func Enable(exe string, args []string) (string, error) {
 	for _, a := range args {
 		cmd = append(cmd, quote(a))
 	}
-	content := "[Desktop Entry]\nType=Application\nName=Slacker Companion\n" +
+	content := "[Desktop Entry]\nType=Application\nName=Slacker\n" +
 		"Comment=Mirrors Slack notification count into the WoW Slacker addon\n" +
 		"Exec=" + strings.Join(cmd, " ") + "\nTerminal=false\nNoDisplay=true\nX-GNOME-Autostart-enabled=true\n"
 	p := desktopPath()
@@ -39,4 +39,10 @@ func Disable() error {
 		return err
 	}
 	return nil
+}
+
+// IsEnabled reports whether the autostart entry exists.
+func IsEnabled() bool {
+	_, err := os.Stat(desktopPath())
+	return err == nil
 }

@@ -1,5 +1,7 @@
 A tiny icon that tells you when you have Slack notifications, without leaving the game.
 
+**Needs a free companion app** (Windows, macOS, Linux). WoW addons can't see other programs, so a small app tells Slacker what Slack is showing. Install the addon, then click the Slacker icon in game for the download link. Open the app once and you're done.
+
 ## Features
 
 - **One small icon.** Muted when Slack has nothing for you. A red badge with the count when it does.
@@ -8,15 +10,20 @@ A tiny icon that tells you when you have Slack notifications, without leaving th
 - **Edit Mode support.** Move and resize it like any Blizzard frame.
 - **Private.** No Slack login or app install. Nothing leaves your computer.
 
-## Needs the companion app
+## Setup
 
-WoW addons can't see other programs, so a small companion app (Windows, macOS, Linux) watches the notifications Slack already shows and passes the count to the addon. Download it from [GitHub Releases](https://github.com/nikpietanze/Slacker/releases/latest).
+1. Install Slacker.
+2. Download the companion for your computer from [GitHub](https://github.com/nikpietanze/Slacker/releases/latest), or click the Slacker icon in game for the link.
+3. Open it once. It installs itself, starts when you log in, and sits in your system tray or menu bar.
+
+The companion only reads what Slack already shows on your computer. No Slack login, no workspace app, and nothing leaves your computer.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
 | `/slack` | Options |
+| `/slack setup` | Companion download link |
 | `/slack test` | Preview the badge |
 | `/slack move` | Move the icon |
 | `/slack reset` | Reset its position |
