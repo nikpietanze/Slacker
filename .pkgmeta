@@ -1,0 +1,13 @@
+package-as: SlackNotify
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+ignore:
+  - docs
+  - .github
+  - companion
+  - Makefile
+  - README.md
+  - CONTRIBUTING.md

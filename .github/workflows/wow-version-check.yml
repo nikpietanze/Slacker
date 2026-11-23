@@ -1,0 +1,60 @@
+name: WoW version check
+
+# Once a day, asks Blizzard's public version server which WoW Forever patch is
+# live. When its interface number no longer matches the TOC, opens an issue
+# (once per patch) so a new patch gets checked before players hit errors.
+
+on:
+  schedule:
+    - cron: "23 14 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare live Forever patch with the TOC
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version=$(curl -fsS --retry 3 http://us.patch.battle.net:1119/wowf/versions \
+            | awk -F'|' '$1 == "us" { print $6 }')
+          if [ -z "$version" ]; then
+            echo "::error::Couldn't read the live WoW Forever version."
+            exit 1
+          fi
+          IFS=. read -r major minor patch build <<< "$version"
+          live=$((major * 10000 + minor * 100 + patch))
+          toc=$(sed -n 's/^## Interface: *\([0-9]*\).*/\1/p' SlackNotify.toc | tr -d '\r')
+          echo "Live: $version (Interface $live). TOC: Interface $toc."
+          if [ "$live" = "$toc" ]; then
+            echo "Up to date."
+            exit 0
+          fi
+
+          title="WoW Forever $major.$minor.$patch is live (Interface $live)"
+          existing=$(gh issue list --state all --search "\"$title\" in:title" --json number -q '.[0].number')
+          if [ -n "$existing" ]; then
+            echo "Already reported in #$existing."
+            exit 0
+          fi
+
+          gh issue create --title "$title" --body "$(cat <<EOF
+          WoW Forever **$version** is live. SlackNotify's TOC still says \`## Interface: $toc\`.
+
+          - [ ] Check what changed in Blizzard's UI code: https://github.com/Gethe/wow-ui-source
+          - [ ] Log in with BugSack on, run \`slacknotify-companion demo\` and check the badge updates without \`/reload\`
+          - [ ] Move the icon in Edit Mode, open the options panel, enter combat
+          - [ ] Update \`## Interface\` in SlackNotify.toc to \`$live\`
+          - [ ] Add a CHANGELOG entry, then tag a release
+
+          Opened automatically by the WoW version check workflow.
+          EOF
+          )"

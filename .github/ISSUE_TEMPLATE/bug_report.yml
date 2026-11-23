@@ -1,0 +1,48 @@
+name: Bug report
+description: Something isn't working
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: input
+    id: build
+    attributes:
+      label: Client build
+      description: Paste the output of `/dump GetBuildInfo()`.
+    validations:
+      required: true
+  - type: textarea
+    id: status
+    attributes:
+      label: SlackNotify status
+      description: Paste the output of `/slack status`.
+      render: text
+  - type: dropdown
+    id: os
+    attributes:
+      label: Your computer
+      options: [Windows 11, Windows 10, macOS, Linux]
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Companion check
+      description: Paste the output of `slacknotify-companion doctor`. Paths may include your username, so edit them out if you like.
+      render: text
+  - type: dropdown
+    id: live
+    attributes:
+      label: Does `slacknotify-companion demo` change the badge without `/reload`?
+      options: ["Yes", "No", "Didn't try"]
+  - type: textarea
+    id: errors
+    attributes:
+      label: Lua errors
+      description: Paste any error text (BugSack/BugGrabber help here).
+      render: text
