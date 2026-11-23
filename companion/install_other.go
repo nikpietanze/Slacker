@@ -24,6 +24,12 @@ func install(self string) (string, error) {
 	return target, copyExecutable(self, target)
 }
 
+// terminateInstalled asks the installed copy to quit; it writes "offline"
+// to the addon on the way out.
+func terminateInstalled() {
+	exec.Command("pkill", "-TERM", "-f", installPath()+" run").Run()
+}
+
 func startDetached(exe string, args ...string) error {
 	cmd := exec.Command(exe, args...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}

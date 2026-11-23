@@ -24,15 +24,35 @@ func (s *darwinSource) Name() string { return "macOS Dock badge" }
 
 var labelRe = regexp.MustCompile(`"label"="([^"]*)"`)
 
+// lsappinfo queries for Slack's StatusLabel, newest form first. On macOS 27
+// "info -only" returns nothing unless -all is given; older releases accept
+// the plain form.
+var badgeQueries = [][]string{
+	{"-all", "info", "-only", "StatusLabel", "Slack"},
+	{"info", "-only", "StatusLabel", "Slack"},
+}
+
 func (s *darwinSource) badge(ctx context.Context) (label string, err error) {
-	out, err := exec.CommandContext(ctx, "/usr/bin/lsappinfo", "info", "-only", "StatusLabel", "Slack").Output()
-	if err != nil {
-		return "", err
+	for _, args := range badgeQueries {
+		out, qerr := exec.CommandContext(ctx, "/usr/bin/lsappinfo", args...).Output()
+		if qerr != nil {
+			err = qerr
+			continue
+		}
+		if l, ok := parseStatusLabel(out); ok {
+			return l, nil
+		}
+		err = nil
 	}
+	return "", err // Slack not running or no badge (or lsappinfo failed)
+}
+
+// parseStatusLabel finds Slack's badge text in lsappinfo output.
+func parseStatusLabel(out []byte) (string, bool) {
 	if m := labelRe.FindSubmatch(out); m != nil {
-		return string(m[1]), nil
+		return string(m[1]), true
 	}
-	return "", nil // Slack not running or no badge
+	return "", false
 }
 
 func parseBadge(label string) int {

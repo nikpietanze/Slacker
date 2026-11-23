@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"slacker/companion/internal/autostart"
 )
@@ -25,13 +26,13 @@ func launch(cfg config) error {
 
 	if release, ok := singleInstance(); ok {
 		release()
-	} else {
-		if installed {
-			message("Slacker", "Slacker is already running. Look for the speech bubble in your "+trayName()+".", false)
-		} else {
-			message("Slacker", "Slacker is already running.\n\nTo update it, quit Slacker from its "+trayName()+
-				" icon, then open this file again.", false)
-		}
+	} else if installed {
+		message("Slacker", "Slacker is already running. Look for the speech bubble in your "+trayName()+".", false)
+		return nil
+	} else if !stopRunning() {
+		// A new download opened while an older copy runs: that's an update.
+		message("Slacker", "Slacker is already running and couldn't be stopped for the update.\n\n"+
+			"Quit Slacker from its "+trayName()+" icon, then open this file again.", true)
 		return nil
 	}
 
@@ -100,6 +101,20 @@ func welcomeText(w *watcher) string {
 		b.WriteString("\n\nSlacker reads the number on Slack's Dock icon, so keep \"Badge application icon\" on for Slack in System Settings > Notifications.")
 	}
 	return b.String()
+}
+
+// stopRunning asks the installed copy to quit (for an update) and waits up to
+// five seconds for it to let go.
+func stopRunning() bool {
+	terminateInstalled()
+	for i := 0; i < 50; i++ {
+		if release, ok := singleInstance(); ok {
+			release()
+			return true
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return false
 }
 
 func copyExecutable(src, dst string) error {

@@ -6,11 +6,15 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+
+	"golang.org/x/term"
 )
 
+// hasConsole reports whether stderr is a real terminal. (A character-device
+// check isn't enough: apps opened from Finder get /dev/null, which is one,
+// and would then log nowhere.)
 func hasConsole() bool {
-	st, err := os.Stderr.Stat()
-	return err == nil && st.Mode()&os.ModeCharDevice != 0
+	return term.IsTerminal(int(os.Stderr.Fd()))
 }
 
 func singleInstance() (func(), bool) {
