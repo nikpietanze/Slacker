@@ -5,7 +5,7 @@ package autostart
 import "strings"
 
 // Name identifies the autostart entry on every platform.
-const Name = "SlackerCompanion"
+const Name = "Slacker"
 
 func quote(arg string) string {
 	if arg != "" && !strings.ContainsAny(arg, " \t\"'\\$`") {

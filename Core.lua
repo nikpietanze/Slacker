@@ -7,6 +7,7 @@ local ADDON_NAME, ns = ...
 ns.MEDIA = [[Interface\AddOns\]] .. ADDON_NAME .. [[\Media\]]
 ns.MAX_COUNT = 99 -- Shown as "99+" above this.
 ns.DEFAULT_POSITION = { point = "CENTER", x = 0, y = 200 }
+ns.COMPANION_URL = "https://github.com/nikpietanze/Slacker#install"
 
 local DB_VERSION = 1
 local DEFAULTS = {
@@ -20,7 +21,8 @@ local DEFAULTS = {
 	-- Alerts
 	flash = true,
 	sound = "none", -- "none", "kit:<SOUNDKIT key>" or "lsm:<LibSharedMedia name>"
-	-- Bridge
+	-- Companion
+	remindCompanion = true, -- Say so in chat when the companion isn't running.
 	interval = 1, -- Seconds between reads of the companion's bridge file.
 }
 
@@ -137,7 +139,65 @@ function Slacker_OnCompartmentLeave()
 	GameTooltip:Hide()
 end
 
+---------------------------------------------------------------------------
+-- Companion setup help: the addon can't see Slack without the companion app,
+-- so make getting it obvious.
+---------------------------------------------------------------------------
+local function setupBox(dialog)
+	return (dialog.GetEditBox and dialog:GetEditBox()) or dialog.editBox or dialog.EditBox
+end
+
+local function hideParent(box)
+	local dialog = box:GetParent()
+	if dialog then dialog:Hide() end
+end
+
+StaticPopupDialogs.SLACKER_SETUP = {
+	text = "Slacker needs its free companion app to see Slack.\n\n"
+		.. "Copy this link (Ctrl+C), open it in your browser and download the app for your computer. "
+		.. "Open it once and you're done: it starts by itself from then on.",
+	button1 = CLOSE or "Close",
+	hasEditBox = true,
+	editBoxWidth = 320,
+	OnShow = function(self)
+		local box = setupBox(self)
+		if box then
+			box:SetText(ns.COMPANION_URL)
+			box:HighlightText()
+			box:SetFocus()
+		end
+	end,
+	EditBoxOnTextChanged = function(box)
+		-- Keep the link intact if a stray key lands in the box.
+		if box:GetText() ~= ns.COMPANION_URL then
+			box:SetText(ns.COMPANION_URL)
+			box:HighlightText()
+		end
+	end,
+	EditBoxOnEnterPressed = hideParent,
+	EditBoxOnEscapePressed = hideParent,
+	timeout = 0,
+	whileDead = true,
+	hideOnEscape = true,
+	preferredIndex = 3,
+}
+
+function ns.ShowSetup()
+	StaticPopup_Show("SLACKER_SETUP")
+end
+
+ns.OnLogin(function()
+	-- The first bridge read happens within a second or two of login.
+	C_Timer.After(12, function()
+		if ns.count == false and ns.db.remindCompanion then
+			ns.Print("can't see Slack yet because its companion app isn't running. "
+				.. "Click the Slacker icon or type |cffffffff/slack setup|r to get it.")
+		end
+	end)
+end)
+
 local commands = {
+	setup = function() ns.ShowSetup() end,
 	status = printStatus,
 	test = function() ns.RunTest() end,
 	move = function() ns.Move() end,
@@ -159,6 +219,6 @@ SlashCmdList.SLACKER = function(input)
 	elseif commands[command] then
 		commands[command]()
 	else
-		ns.Print("Commands: /slack [options | test | move | unlock | lock | reset | status | debug]")
+		ns.Print("Commands: /slack [options | setup | test | move | unlock | lock | reset | status | debug]")
 	end
 end

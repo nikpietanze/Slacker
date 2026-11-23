@@ -120,7 +120,10 @@ local function showTooltip(self)
 	GameTooltip:SetOwner(self, top and "ANCHOR_BOTTOMLEFT" or "ANCHOR_TOPLEFT")
 	GameTooltip:AddLine("Slack: " .. ns.Describe(ns.count), 1, 1, 1)
 	if ns.count == false then
-		GameTooltip:AddLine("Start the Slacker companion on your computer.", 0.7, 0.7, 0.7, true)
+		GameTooltip:AddLine("Slacker needs its free companion app to see Slack.", 0.7, 0.7, 0.7, true)
+		GameTooltip:AddLine("Click to get it, right-click for options", 0.5, 0.5, 0.5)
+		GameTooltip:Show()
+		return
 	elseif type(ns.count) == "number" and ns.count > 0 and ns.lastNotified then
 		GameTooltip:AddLine("Last: " .. date("%H:%M", ns.lastNotified), 0.7, 0.7, 0.7)
 	end
@@ -274,7 +277,12 @@ ns.OnLogin(function()
 		applyPosition()
 	end)
 	button:SetScript("OnClick", function(_, mouseButton)
-		if mouseButton == "RightButton" and not editing then ns.OpenOptions() end
+		if editing then return end
+		if mouseButton == "RightButton" then
+			ns.OpenOptions()
+		elseif ns.count == false then
+			ns.ShowSetup()
+		end
 	end)
 	button:SetScript("OnEnter", showTooltip)
 	button:SetScript("OnLeave", function() GameTooltip:Hide() end)

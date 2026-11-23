@@ -114,6 +114,13 @@ ns.OnLoad(function()
 	button("Test badge", "Test", function() ns.RunTest() end,
 		"Show sample counts on the icon for a few seconds, without the companion.")
 
+	header("Companion app")
+
+	checkbox("remindCompanion", "Remind me when it isn't running",
+		"After you log in, say so in chat if the companion app isn't running.")
+	button("Get the companion app", "Get it", function() ns.ShowSetup() end,
+		"Slacker needs a small free app on your computer to see Slack. Shows the download link.")
+
 	Settings.RegisterAddOnCategory(category)
 end)
 

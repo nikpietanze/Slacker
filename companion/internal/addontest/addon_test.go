@@ -195,6 +195,11 @@ func TestSlashCommands(t *testing.T) {
 			if line:find("dev on client 1.60.1", 1, true) then found = true end
 		end
 		assert(found, "status prints version and client")
+		SlashCmdList.SLACKER("setup")
+		assert(mock.popup == "SLACKER_SETUP", "setup opens the link popup")
+		assert(mock.popupText == ns.COMPANION_URL, "popup shows the download link")
+		assert(mock.popupTextAfterTyping == ns.COMPANION_URL, "typing can't change the link")
+		assert(mock.popupHidden, "escape closes the popup")
 		SlashCmdList.SLACKER("bogus")
 		SlashCmdList.SLACKER("debug")
 		SlashCmdList.SLACKER("test")
@@ -233,5 +238,38 @@ func TestSettingsAndPosition(t *testing.T) {
 
 		ns.ResetSettings()
 		assert(SlackerDB.iconSize == 32 and SlackerDB.sound == "none", "defaults restored")
+	`)
+}
+
+func TestCompanionMissingHelp(t *testing.T) {
+	L, _ := newAddon(t)
+	run(t, L, `
+		assert(ns.count == false, "starts offline (shipped placeholder)")
+		mock.advance(12)
+		local reminded
+		for _, line in ipairs(mock.printed) do
+			if line:find("/slack setup", 1, true) then reminded = true end
+		end
+		assert(reminded, "login reminder when the companion isn't running")
+		mock.popup = nil
+		ns.button._scripts.OnClick(ns.button, "LeftButton")
+		assert(mock.popup == "SLACKER_SETUP", "clicking the offline icon offers the download link")
+		mock.popup = nil
+		ns.button._scripts.OnClick(ns.button, "RightButton")
+		assert(mock.popup == nil and mock.openedOptions == "Slacker", "right-click still opens options")
+	`)
+}
+
+func TestNoReminderWhenConnected(t *testing.T) {
+	L, dir := newAddon(t)
+	must(t, bridge.WriteCode(dir, bridge.CodeForCount(0)))
+	run(t, L, `
+		mock.advance(12)
+		for _, line in ipairs(mock.printed) do
+			assert(not line:find("/slack setup", 1, true), "no reminder while connected")
+		end
+		mock.popup = nil
+		ns.button._scripts.OnClick(ns.button, "LeftButton")
+		assert(mock.popup == nil, "left-click does nothing while connected")
 	`)
 }

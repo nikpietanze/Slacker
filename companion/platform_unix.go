@@ -27,5 +27,4 @@ func singleInstance() (func(), bool) {
 	return func() { f.Close() }, true
 }
 
-func notifyStarted(int) {}
-func showError(error)   {}
+func messageBox(string, string, bool) {} // Windows only; see desktop.go

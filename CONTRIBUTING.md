@@ -20,7 +20,8 @@ Thanks for helping out. A few ground rules keep Slacker small and safe to run:
 | `companion/internal/source/` | One notification watcher per OS |
 | `companion/internal/bridge/` | Count-to-texture-size codec, file writing, and addon folder discovery |
 | `companion/internal/addontest/` | Runs the addon's Lua against a mocked client |
-| `companion/cmd/genart/` | Draws `Media/*.tga` and `docs/logo/logo.png` from code |
+| `companion/cmd/genart/` | Draws `Media/*.tga`, `docs/logo/logo.png`, the tray icons in `companion/assets/` and the Windows `.exe` icon, all from code |
+| `scripts/build-macos.sh` | Builds and zips `Slacker Companion.app` |
 
 `.pkgmeta` keeps `companion/`, `docs/` and the repo files out of the addon zip.
 
@@ -30,13 +31,14 @@ You need Go (version in `companion/go.mod`).
 
 ```sh
 make test    # companion tests + the addon's Lua against a mocked client
-make build   # companion binaries for every OS into dist/
-make art     # redraw the textures and logo
+make build   # Windows and Linux companions into dist/
+make macos   # macOS app (on a Mac: the menu bar icon needs cgo)
+make art     # redraw the addon textures, logo, tray icons and app icons
 ```
 
 `make art` draws the default `round` style. To try the others, run `go run ./cmd/genart -style flat ..` (or `glass`) from `companion/`.
 
-To try it in game, symlink the repo into `_forever_/Interface/AddOns/Slacker`. Then run `go run . demo --wow-dir "<WoW folder>"` from `companion/` and turn on `/slack debug`. The companion rewrites `Bridge/count.tga` while it runs. Don't commit that file unless it's the 2×2 placeholder (`go run . set off` puts it back).
+To try it in game, symlink the repo into `_forever_/Interface/AddOns/Slacker`. Then run `go run . demo --wow-dir "<WoW folder>"` from `companion/` and turn on `/slack debug`. A bare `go run .` with no arguments behaves like a double-click: it installs itself and turns on start at login. Use `go run . run` while developing. The companion rewrites `Bridge/count.tga` while it runs. Don't commit that file unless it's the 2×2 placeholder (`go run . set off` puts it back).
 
 Before a release, go through [docs/TESTING.md](docs/TESTING.md).
 

@@ -51,6 +51,7 @@ Everything is under **Esc → Options → AddOns → Slacker** (or type `/slack`
 |---|---|
 | Icon | Lock position, tooltip, icon size (20 to 64 px), badge size, opacity, plus Move and Reset |
 | New notifications | Flash, sound (built-in or your SharedMedia sounds), plus Test |
+| Companion app | Remind me when it isn't running, plus Get it (shows the download link) |
 
 The panel's **Defaults** button restores everything. To move the icon, click **Move** (or type `/slack move`) to open Edit Mode, then drag it. Select it there to change its size and opacity. While it's unlocked, you can also just drag it.
 
@@ -59,6 +60,7 @@ The panel's **Defaults** button restores everything. To move the icon, click **M
 | Command | What it does |
 |---|---|
 | `/slack` | Open the options |
+| `/slack setup` | Show the companion app's download link |
 | `/slack test` | Show sample counts on the badge for a few seconds |
 | `/slack move` | Open Edit Mode to move the icon |
 | `/slack unlock` / `/slack lock` | Drag the icon without Edit Mode, then lock it |
@@ -80,42 +82,44 @@ World of Warcraft/_forever_/Interface/AddOns/Slacker/Slacker.toc
 
 You can also clone this repo into that folder as `Slacker`. Target client: WoW Forever, Interface `16001`.
 
-### 2. The companion
+### 2. The companion app
 
-Download the companion for your computer from the same release. It's one file, with nothing to install and almost no CPU or memory use.
+WoW addons can't see other programs, so Slacker needs a small free app on your computer that tells it what Slack is showing. Download it from the [latest release](https://github.com/nikpietanze/Slacker/releases/latest):
 
-**Windows**
+| Your computer | Download | Then |
+|---|---|---|
+| Windows 10/11 | `Slacker-Companion-Windows.exe` | Double-click it. If Windows says *"Windows protected your PC"*, click **More info → Run anyway**. |
+| macOS 11+ | `Slacker-Companion-macOS.zip` | Unzip it and open **Slacker Companion**. The first time, macOS blocks it: open **System Settings → Privacy & Security** and click **Open Anyway**. |
+| Linux | `Slacker-Companion-Linux-x64` (or `-arm64`) | Make it executable (`chmod +x`) and run it. |
 
-1. Download `slacker-companion-windows-amd64.exe` (or `-arm64`), rename it to `slacker-companion.exe`, and put it somewhere permanent, e.g. `%LOCALAPPDATA%\Slacker\`.
-2. In Slack, open **Settings → Notifications** and make sure notifications are delivered through **Windows notifications**.
-3. Double-click it. A message confirms it's running in the background.
-4. Start it at login: run `.\slacker-companion.exe autostart on` in a terminal in that folder.
+That's it. It installs itself, starts by itself when you log in, and puts a speech bubble in your system tray (Windows, Linux) or menu bar (macOS). The bubble's menu shows your Slack count, whether it found the WoW addon, a **Start when I log in** switch, and **Quit**. It finds WoW and the addon on its own, in either order.
 
-**macOS**
+Forgot this step? In game, the Slacker icon says the companion isn't running. Click it for the download link (or type `/slack setup`).
 
-```sh
-chmod +x slacker-companion-darwin-arm64        # -amd64 on Intel Macs
-xattr -d com.apple.quarantine slacker-companion-darwin-arm64
-./slacker-companion-darwin-arm64 autostart on   # installs a LaunchAgent and starts it
+**One Slack setting to check:**
+
+- **Windows:** Slack's notifications have to go through Windows, not Slack's own pop-ups: **Slack → Settings → Notifications**. That's the default.
+- **macOS:** Slack has to be allowed to badge its Dock icon: **System Settings → Notifications → Slack → Badge application icon**. That's the default too.
+
+<details>
+<summary>Advanced: command line</summary>
+
+The companion is also a command-line tool (`slacker-companion` once installed):
+
+```
+slacker-companion doctor             what it can see, and which addon folders it found
+slacker-companion demo               cycle sample counts on the in-game badge
+slacker-companion run [--no-tray]    run in the foreground
+slacker-companion autostart on|off
+Flags: --wow-dir DIR  --addon-dir DIR  --interval 1s  --log FILE  -v
 ```
 
-Make sure Slack can badge its Dock icon: **System Settings → Notifications → Slack → Badge application icon**.
-
-**Linux** (WoW under Wine, Lutris, Steam/Proton or Bottles)
-
-```sh
-chmod +x slacker-companion-linux-amd64
-./slacker-companion-linux-amd64 doctor
-./slacker-companion-linux-amd64 autostart on --wow-dir "$HOME/Games/battlenet/drive_c/Program Files (x86)/World of Warcraft"
-```
-
-The companion finds common install locations on its own. Otherwise, pass `--wow-dir "<folder containing _forever_>"` or `--addon-dir "<…/AddOns/Slacker>"`.
+It installs to `%LOCALAPPDATA%\Programs\Slacker` (Windows), `~/Applications/Slacker Companion.app` (macOS) or `~/.local/bin` (Linux). If your WoW folder is somewhere unusual, run `autostart on --wow-dir "<folder containing _forever_>"` once.
+</details>
 
 ### 3. Check it works
 
-1. `slacker-companion doctor` shows what it can see and which addon folders it found.
-2. With the companion stopped and you logged into WoW, run `slacker-companion demo`. The badge should step through 1, 2, 3, 7, 12, 42, 99, 99+.
-3. Start the companion again, then have someone DM you.
+Have someone send you a Slack DM while you're in game. Within a second or two, the icon gets a red badge. You can also click **Test** in Slacker's options to see the badge at any time.
 
 If the badge only changes after `/reload`, see [Troubleshooting](docs/TROUBLESHOOTING.md#the-badge-only-updates-after-reload).
 

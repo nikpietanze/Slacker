@@ -3,12 +3,11 @@ package autostart
 import (
 	"encoding/xml"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
-const label = "com.github.slacker.companion"
+const label = "io.github.nikpietanze.slacker"
 
 func plistPath() string {
 	home, _ := os.UserHomeDir()
@@ -47,15 +46,22 @@ func Enable(exe string, args []string) (string, error) {
 	if err := os.WriteFile(p, []byte(b.String()), 0o644); err != nil {
 		return "", err
 	}
-	exec.Command("launchctl", "unload", p).Run()
-	exec.Command("launchctl", "load", "-w", p).Run()
+	// Not loaded now: the running copy is already up, and launchd picks the
+	// agent up at the next login.
 	return p, nil
+}
+
+// IsEnabled reports whether the login item is installed.
+func IsEnabled() bool {
+	_, err := os.Stat(plistPath())
+	return err == nil
 }
 
 // Disable unloads and removes the LaunchAgent.
 func Disable() error {
+	// Removing the plist stops it at the next login without stopping the
+	// copy that's running now.
 	p := plistPath()
-	exec.Command("launchctl", "unload", "-w", p).Run()
 	if err := os.Remove(p); err != nil && !os.IsNotExist(err) {
 		return err
 	}

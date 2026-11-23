@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -19,6 +20,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"fyne.io/systray"
 
 	"slacker/companion/internal/autostart"
 	"slacker/companion/internal/bridge"
@@ -38,6 +41,8 @@ type config struct {
 	interval  time.Duration
 	verbose   bool
 	logFile   string
+	noTray    bool
+	welcome   bool
 }
 
 func usage() {
@@ -46,8 +51,11 @@ func usage() {
 Mirrors your Slack desktop notification count into the Slacker WoW addon.
 Local only: no Slack login, no network.
 
+Double-click it to install: it copies itself to a permanent place, starts
+at login and shows an icon in your system tray / menu bar.
+
 Usage:
-  slacker-companion [run] [flags]     watch notifications (default)
+  slacker-companion run [flags]         watch notifications with a tray icon
   slacker-companion doctor [flags]    check setup and show what is detected
   slacker-companion demo [flags]      cycle fake counts to test the in-game badge
   slacker-companion set N|off [flags] write one value and exit
@@ -77,6 +85,8 @@ func parseFlags(args []string, cfg *config) ([]string, error) {
 	fs.DurationVar(&cfg.interval, "interval", def, "how often to check for notifications")
 	fs.BoolVar(&cfg.verbose, "v", false, "verbose logging")
 	fs.StringVar(&cfg.logFile, "log", "", "write the log to this file")
+	fs.BoolVar(&cfg.noTray, "no-tray", false, "run without a tray / menu bar icon")
+	fs.BoolVar(&cfg.welcome, "welcome", false, "show the first-run welcome message")
 	// Allow flags before and after positional arguments ("set 3 --wow-dir X").
 	var positional []string
 	for {
@@ -95,11 +105,24 @@ func parseFlags(args []string, cfg *config) ([]string, error) {
 	return positional, nil
 }
 
+func init() {
+	// The macOS menu bar must be driven from the main thread.
+	runtime.LockOSThread()
+}
+
 func main() {
-	args := os.Args[1:]
-	cmd := "run"
-	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
-		cmd, args = args[0], args[1:]
+	var args []string
+	for _, a := range os.Args[1:] {
+		if !strings.HasPrefix(a, "-psn_") { // old macOS adds this when opened from Finder
+			args = append(args, a)
+		}
+	}
+	cmd := "launch" // double-click
+	if len(args) > 0 {
+		cmd = "run"
+		if !strings.HasPrefix(args[0], "-") {
+			cmd, args = args[0], args[1:]
+		}
 	}
 	if cmd == "help" || cmd == "-h" || cmd == "--help" {
 		usage()
@@ -116,8 +139,14 @@ func main() {
 	logger := setupLog(cfg)
 
 	switch cmd {
+	case "launch":
+		err = launch(cfg)
 	case "run":
-		err = run(cfg, logger, len(os.Args) == 1)
+		err = run(cfg, logger)
+		if err == errAlreadyRunning {
+			fmt.Fprintln(os.Stderr, "Slacker is already running.")
+			return
+		}
 	case "doctor":
 		err = doctor(cfg)
 	case "demo":
@@ -138,7 +167,9 @@ func main() {
 			logger.Printf("error: %v", err) // the log is the only trace when started at login
 		}
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		showError(err)
+		if !hasConsole() {
+			message("Slacker", err.Error(), true)
+		}
 		os.Exit(1)
 	}
 }
@@ -180,113 +211,43 @@ const noAddonHelp = `no Slacker addon folder found.
 Install the addon into <WoW>/_forever_/Interface/AddOns/Slacker, or pass
 --wow-dir "<path to World of Warcraft>" or --addon-dir "<path to the Slacker folder>"`
 
-// publisher writes the current code into every addon folder it knows about,
-// picking up newly installed copies as it goes.
-type publisher struct {
-	cfg     config
-	log     *log.Logger
-	dirs    map[string]int // dir -> code last written
-	scanned time.Time
-}
+var errAlreadyRunning = errors.New("already running")
 
-func (p *publisher) publish(code int) {
-	if time.Since(p.scanned) > 30*time.Second {
-		p.scanned = time.Now()
-		found := discover(p.cfg)
-		next := map[string]int{}
-		for _, d := range found {
-			if c, ok := p.dirs[d]; ok {
-				next[d] = c
-			} else {
-				next[d] = -1
-				p.log.Printf("bridging to %s", d)
-			}
-		}
-		if len(found) == 0 && len(p.dirs) > 0 {
-			p.log.Printf("lost all addon folders; %s", noAddonHelp)
-		}
-		p.dirs = next
-	}
-	for d, last := range p.dirs {
-		if last == code {
-			continue
-		}
-		if err := bridge.WriteCode(d, code); err != nil {
-			p.log.Printf("writing %s: %v", d, err)
-			continue
-		}
-		p.dirs[d] = code
-	}
-}
-
-func run(cfg config, logger *log.Logger, interactiveLaunch bool) error {
+// run watches Slack and feeds the addon until quit, with a tray icon unless
+// --no-tray is given.
+func run(cfg config, logger *log.Logger) error {
 	release, ok := singleInstance()
 	if !ok {
-		return fmt.Errorf("the companion is already running")
+		return errAlreadyRunning
 	}
 	defer release()
 
-	dirs := discover(cfg)
-	if len(dirs) == 0 {
-		return fmt.Errorf("%s", noAddonHelp)
-	}
-	src := source.New(source.Options{Interval: cfg.interval, Log: logger, Verbose: cfg.verbose})
-	logger.Printf("slacker-companion %s watching %s", version, src.Name())
-	for _, d := range dirs {
-		logger.Printf("bridging to %s", d)
-	}
-	if interactiveLaunch {
-		notifyStarted(len(dirs))
-	}
-
-	pub := &publisher{cfg: cfg, log: logger, dirs: map[string]int{}, scanned: time.Now()}
-	for _, d := range dirs {
-		pub.dirs[d] = -1
-	}
-
+	w := newWatcher(cfg, logger)
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	done := make(chan error, 1)
+	go func() { done <- w.Run(ctx) }()
 
-	counts := make(chan int, 16)
-	errc := make(chan error, 1)
+	if cfg.noTray {
+		return <-done
+	}
+	if cfg.welcome {
+		go func() {
+			time.Sleep(1500 * time.Millisecond) // let the first addon scan finish
+			message("Slacker", welcomeText(w), false)
+		}()
+	}
 	go func() {
-		errc <- src.Run(ctx, func(n int) {
-			select {
-			case counts <- n:
-			default: // a newer value will follow
-			}
-		})
+		<-ctx.Done()
+		systray.Quit()
 	}()
-
-	last := -1
-	pub.publish(bridge.CodeForCount(0))
-	heartbeat := time.NewTicker(30 * time.Second)
-	defer heartbeat.Stop()
-	for {
-		select {
-		case n := <-counts:
-			if n != last {
-				logger.Printf("slack notifications: %d", n)
-				last = n
-			}
-			pub.publish(bridge.CodeForCount(n))
-		case <-heartbeat.C:
-			// Rescan for new addon installs and rewrite if something reset the file.
-			if last >= 0 {
-				pub.publish(bridge.CodeForCount(last))
-			}
-		case err := <-errc:
-			pub.publish(bridge.CodeOffline)
-			if err != nil {
-				return err
-			}
-			return nil
-		case <-ctx.Done():
-			logger.Printf("stopping")
-			pub.scanned = time.Now()
-			pub.publish(bridge.CodeOffline)
-			return nil
-		}
+	runTray(w, cancel)
+	cancel()
+	select {
+	case err := <-done:
+		return err
+	case <-time.After(3 * time.Second):
+		return nil
 	}
 }
 
@@ -407,19 +368,9 @@ func setAutostart(cfg config, args []string) error {
 	if exe, err = filepath.EvalSymlinks(exe); err != nil {
 		return err
 	}
-	runArgs := []string{"run"}
-	for _, d := range cfg.addonDirs {
-		abs, _ := filepath.Abs(d)
-		runArgs = append(runArgs, "--addon-dir", abs)
-	}
-	for _, d := range cfg.wowDirs {
-		abs, _ := filepath.Abs(d)
-		runArgs = append(runArgs, "--wow-dir", abs)
-	}
-	where, err := autostart.Enable(exe, runArgs)
-	if err != nil {
+	if err := enableAutostartFor(exe, cfg); err != nil {
 		return err
 	}
-	fmt.Printf("autostart enabled: %s\n", where)
+	fmt.Println("autostart enabled")
 	return nil
 }
