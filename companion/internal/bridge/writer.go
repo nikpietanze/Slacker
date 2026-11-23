@@ -20,7 +20,7 @@ var relPath = filepath.Join("Bridge", "count.tga")
 // has the file open, so it retries before falling back to a direct write.
 func WriteCode(addonDir string, code int) error {
 	w, h := Dimensions(code)
-	data := GrayTGA(w, h)
+	data := BlankTGA(w, h)
 	dst := filepath.Join(addonDir, relPath)
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err

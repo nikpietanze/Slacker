@@ -2,14 +2,17 @@ package bridge
 
 import "encoding/binary"
 
-// GrayTGA returns an uncompressed 8-bit grayscale TGA of the given size with
-// every pixel black. Content is irrelevant to the bridge; only the size is read.
-func GrayTGA(w, h int) []byte {
-	buf := make([]byte, 18+w*h)
-	buf[2] = 3 // uncompressed grayscale
+// BlankTGA returns an uncompressed 32-bit TGA of the given size with every
+// pixel transparent. Content is irrelevant to the bridge; only the size is
+// read. 32-bit is the same format as the addon's other textures, which every
+// client loads.
+func BlankTGA(w, h int) []byte {
+	buf := make([]byte, 18+w*h*4)
+	buf[2] = 2 // uncompressed true-color
 	binary.LittleEndian.PutUint16(buf[12:], uint16(w))
 	binary.LittleEndian.PutUint16(buf[14:], uint16(h))
-	buf[16] = 8 // bits per pixel
+	buf[16] = 32
+	buf[17] = 0x28 // 8 alpha bits, top-left origin
 	return buf
 }
 

@@ -112,8 +112,10 @@ local function printStatus()
 	local version, build, _, interface = GetBuildInfo()
 	ns.Print(("%s on client %s (%s), interface %s"):format(ns.Version(), version, build, interface))
 	print(("  slack: %s"):format(ns.Describe(ns.count)))
-	print(("  bridge texture: %s, last read %s"):format(ns.lastSize or "not read yet",
-		ns.lastRead and (math.floor(GetTime() - ns.lastRead + 0.5) .. "s ago") or "never"))
+	print(("  bridge texture: %s, reference: %s (64x64 file), last read %s"):format(ns.lastSize or "not read yet",
+		ns.lastRef or "-", ns.lastRead and (math.floor(GetTime() - ns.lastRead + 0.5) .. "s ago") or "never"))
+	local w, h = GetPhysicalScreenSize and GetPhysicalScreenSize()
+	print(("  screen: %s, ui scale: %.2f"):format(w and (w .. "x" .. h) or "?", UIParent:GetEffectiveScale()))
 	print(("  edit mode: %s, layout: %s"):format(ns.EditModeAvailable() and "yes" or "no", ns.LayoutKey()))
 end
 
@@ -191,7 +193,11 @@ ns.OnLogin(function()
 	C_Timer.After(12, function()
 		if ns.count == false and ns.db.remindCompanion then
 			ns.Print("can't see Slack yet because its companion app isn't running. "
-				.. "Click the Slacker icon or type |cffffffff/slack setup|r to get it.")
+				.. "Click the Slacker icon or type |cffffffff/slacker setup|r to get it.")
+		elseif ns.count == nil and ns.lastRead then
+			-- Reads happen but never decode: a client quirk worth reporting.
+			ns.Print("can't read its bridge file on this client. Please open an issue at "
+				.. "github.com/nikpietanze/Slacker with the output of |cffffffff/slacker status|r.")
 		end
 	end)
 end)
@@ -210,8 +216,7 @@ local commands = {
 	end,
 }
 
-SLASH_SLACKER1 = "/slack"
-SLASH_SLACKER2 = "/slacker"
+SLASH_SLACKER1 = "/slacker"
 SlashCmdList.SLACKER = function(input)
 	local command = strtrim((input or ""):lower())
 	if command == "" or command == "options" or command == "config" then
@@ -219,6 +224,6 @@ SlashCmdList.SLACKER = function(input)
 	elseif commands[command] then
 		commands[command]()
 	else
-		ns.Print("Commands: /slack [options | setup | test | move | unlock | lock | reset | status | debug]")
+		ns.Print("Commands: /slacker [options | setup | test | move | unlock | lock | reset | status | debug]")
 	end
 end

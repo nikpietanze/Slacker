@@ -15,17 +15,24 @@ local BRIDGE_PATH = [[Interface\AddOns\]] .. ADDON_NAME .. [[\Bridge\count.tga]]
 --   code 0       companion offline (the 2x2 placeholder shipped with the addon)
 --   code 1..100  count 0..99
 --   code 101     100 or more ("99+")
+--
+-- GetSize() reports UI units, not file pixels: on a Retina screen or with a
+-- UI scale, a 2x2 file can measure 1x1. So every read also measures a texture
+-- of known size (the 64x64 icon) and scales by that, then rounds to the
+-- nearest power of two, which tolerates any leftover rounding.
 ---------------------------------------------------------------------------
 local MAX_EXP = 10
 local NUM_CODES = ns.MAX_COUNT + 3
-local codeBySize = {}
+local REF_SIZE = 64 -- Media\Icon.tga
+local LOG2 = math.log(2)
+local codeByExp = {}
 do
 	local n, s = 0, 0
 	while n < NUM_CODES do
 		for a = 0, s do
 			local b = s - a
 			if n < NUM_CODES and a <= MAX_EXP and b <= MAX_EXP then
-				codeBySize[("%dx%d"):format(2 ^ (a + 1), 2 ^ (b + 1))] = n
+				codeByExp[a .. "," .. b] = n
 				n = n + 1
 			end
 		end
@@ -33,11 +40,21 @@ do
 	end
 end
 
+-- Size in file pixels -> exponent, or nil if it can't be a bridge size.
+local function exponent(texels)
+	if texels < 1.41 then return nil end -- under 2 px (with rounding slack)
+	return math.floor(math.log(texels) / LOG2 + 0.5) - 1
+end
+
+-- Decodes a measured size. scaleW/scaleH convert UI units to file pixels
+-- (measured reference size / real reference size); 1 when omitted.
 -- Returns the count (0..100, 100 meaning 99+), false when the companion is
 -- offline, or nil when the size isn't a bridge value (e.g. not loaded yet).
-function ns.DecodeSize(w, h)
-	if not w or not h then return nil end
-	local code = codeBySize[("%dx%d"):format(math.floor(w + 0.5), math.floor(h + 0.5))]
+function ns.DecodeSize(w, h, scaleW, scaleH)
+	if not w or not h or w <= 0 or h <= 0 then return nil end
+	local a, b = exponent(w / (scaleW or 1)), exponent(h / (scaleH or 1))
+	if not a or not b then return nil end
+	local code = codeByExp[a .. "," .. b]
 	if code == nil then return nil end
 	if code == 0 then return false end
 	return code - 1
@@ -74,6 +91,10 @@ probeFrame:SetPoint("BOTTOMLEFT")
 local probe = probeFrame:CreateTexture(nil, "BACKGROUND")
 probe:SetPoint("TOPLEFT")
 probe:SetAlpha(0)
+-- Same setup with a texture of known size, to measure the screen scaling.
+local ref = probeFrame:CreateTexture(nil, "BACKGROUND")
+ref:SetPoint("TOPLEFT")
+ref:SetAlpha(0)
 
 local waiting, waitStart = false, 0
 
@@ -81,11 +102,16 @@ local function finishProbe()
 	waiting = false
 	probeFrame:SetScript("OnUpdate", nil)
 	local w, h = probe:GetSize()
-	ns.lastSize = ("%dx%d"):format(math.floor(w + 0.5), math.floor(h + 0.5))
+	local rw, rh = ref:GetSize()
+	ns.lastSize = ("%.2fx%.2f"):format(w, h)
+	ns.lastRef = ("%.2fx%.2f"):format(rw, rh)
 	ns.lastRead = GetTime()
-	local value = ns.DecodeSize(w, h)
+	local value
+	if rw > 0 and rh > 0 then
+		value = ns.DecodeSize(w, h, rw / REF_SIZE, rh / REF_SIZE)
+	end
 	if ns.debug then
-		ns.Print(("bridge %s -> %s"):format(ns.lastSize, tostring(value)))
+		ns.Print(("bridge %s, reference %s -> %s"):format(ns.lastSize, ns.lastRef, tostring(value)))
 	end
 	if value ~= nil then setCount(value) end
 end
@@ -110,6 +136,7 @@ local function readBridge()
 end
 
 ns.OnLogin(function()
+	ref:SetTexture(ns.MEDIA .. "Icon")
 	C_Timer.NewTicker(math.max(0.5, ns.db.interval or 1), readBridge)
 	readBridge()
 end)

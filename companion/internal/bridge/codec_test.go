@@ -38,7 +38,7 @@ func TestSmallCountsAreTiny(t *testing.T) {
 			maxArea = w * h
 		}
 	}
-	t.Logf("largest bridge file: %d bytes", 18+maxArea)
+	t.Logf("largest bridge file: %d bytes", 18+4*maxArea)
 }
 
 func TestCodeForCountClamps(t *testing.T) {

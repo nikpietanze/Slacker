@@ -1,6 +1,6 @@
 # In-game test checklist
 
-Run through this list before tagging a release. Note your client build from `/slack status`, and keep BugSack open.
+Run through this list before tagging a release. Note your client build from `/slacker status`, and keep BugSack open.
 
 Slacker's logic and the companion are covered by tests outside the game (`make test`). Live texture reloading, Edit Mode, the options panel and layout still need a real client.
 
@@ -22,7 +22,7 @@ Slacker's logic and the companion are covered by tests outside the game (`make t
 | Check | Expected result |
 |---|---|
 | Offline | With the companion stopped, the icon is dim and the tooltip says the companion app is needed. Clicking it shows a popup with the download link already selected. About 12 seconds after login, chat says so once. Turning off **Remind me when it isn't running** stops the chat line. |
-| Live updates | Run `slacker-companion demo`. The badge steps through 1, 2, 3, 7, 12, 42, 99, 99+ **without** `/reload`. With `/slack debug` on, each read prints the new size. |
+| Live updates | Run `slacker-companion demo`. The badge steps through 1, 2, 3, 7, 12, 42, 99, 99+ **without** `/reload`. With `/slacker debug` on, each read prints the new size. |
 | Real notification | Start the companion and minimize Slack. A DM from someone shows a badge within about two seconds. |
 | Clear | Focus Slack (Windows) or read the message (macOS, Linux). The badge goes away. |
 | Reload | `/reload` while the badge shows a count. It comes back with the same count, without a flash or sound. |
@@ -47,9 +47,9 @@ Slacker's logic and the companion are covered by tests outside the game (`make t
 |---|---|
 | Panel | Esc → Options → AddOns → Slacker lists every setting. **Defaults** restores them. |
 | Sound | Picking a sound in the dropdown plays it. SharedMedia sounds show up when installed. |
-| Test | **Test** and `/slack test` cycle sample counts, then hand back to the real count. |
+| Test | **Test** and `/slacker test` cycle sample counts, then hand back to the real count. |
 | Compartment | The minimap addons menu entry opens options on left-click and tests on right-click. |
-| Commands | `/slack`, `/slack move`, `lock`, `unlock`, `reset`, `status` and `debug` all work, and an unknown command prints the list. |
+| Commands | `/slacker`, `/slacker move`, `lock`, `unlock`, `reset`, `status` and `debug` all work, and an unknown command prints the list. |
 
 ## Needs confirming on a live client
 
