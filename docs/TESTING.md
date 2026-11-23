@@ -51,9 +51,16 @@ Slacker's logic and the companion are covered by tests outside the game (`make t
 | Compartment | The minimap addons menu entry opens options on left-click and tests on right-click. |
 | Commands | `/slacker`, `/slacker move`, `lock`, `unlock`, `reset`, `status` and `debug` all work, and an unknown command prints the list. |
 
-## Needs confirming on a live client
+## Learned on a live client
 
-- The client re-reads `Bridge\count.tga` after the probe texture is cleared and set again. This is the whole live-update mechanism. If it caches the file, only `/reload` updates the badge.
-- `Texture:GetSize()` on the unsized, single-anchor probe returns the file's native size once `IsObjectLoaded()` is true, including while its alpha is 0.
-- 8-bit grayscale TGA loads, at sizes up to 128×1024.
-- LibEditMode lists Interface 16001 as supported (PoisonSlot uses it on this client). If it errors, Slacker falls back to dragging.
+On WoW Forever 1.60.1 (build 71037, macOS, Nov 2026):
+
+- `Texture:GetSize()` on an unsized, single-anchor, alpha-0 texture returns the file's exact pixel size once loaded (2×2 read as `2.00x2.00`, the 64×64 icon as `64.00x64.00`).
+- 32-bit TGA loads. An 8-bit grayscale TGA did **not** (it measured 1×1).
+- Textures stay cached while in use, and unused ones are freed in a cleanup that ran 7 to 76 seconds apart. With one bridge file read every second, the badge picked up a change only after a cleanup, and got stuck when the file was held most of the time. Files left unused were read fresh after a cleanup. That's why the bridge is a ring of 128 slots.
+- LibEditMode works on Interface 16001 (PoisonSlot uses it too).
+
+## Still to confirm
+
+- The slot ring in game: changes should show within about two seconds. After a test, `bridgeLog` in `SavedVariables/Slacker.lua` lists when each change arrived.
+- Windows and Linux (Wine) clients, which should behave the same.

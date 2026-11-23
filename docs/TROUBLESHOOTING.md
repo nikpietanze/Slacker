@@ -6,7 +6,7 @@ Start with:
 slacker-companion doctor
 ```
 
-It shows the notification source, what it can see right now, which addon folders it will write to, and what the bridge file currently says.
+It shows the notification source, what it can see right now, which addon folders it will write to, and what the bridge files currently say.
 
 In game, `/slacker status` shows what the addon last read, and `/slacker debug` prints every bridge read to chat.
 
@@ -33,12 +33,13 @@ The app isn't notarized by Apple yet. Open **System Settings → Privacy & Secur
 
 ## The badge only updates after `/reload`
 
-The live bridge relies on the game client re-reading `Bridge/count.tga` after the addon releases it. Check:
+The addon cycles through 128 bridge files so that it always reads a fresh one (see [How it works](HOW-IT-WORKS.md#getting-past-the-texture-cache)). Check:
 
 1. Quit the companion from its tray / menu bar icon, run `slacker-companion demo` from a terminal, and watch the in-game icon.
-2. In game, `/slacker debug` prints `bridge WxH -> value` every second.
+2. In game, `/slacker debug` prints `slot N: sizes -> value` every second.
    - If the size never changes while `demo` runs, the client is serving a cached copy. Please [open an issue](https://github.com/nikpietanze/Slacker/issues) with your client version (`/dump GetBuildInfo()`) and OS.
-   - If it prints `0x0`, the texture isn't loading. Make sure `Bridge/count.tga` exists in the addon folder; it ships with the addon.
+   - If it prints `0x0`, the files aren't loading. Make sure the addon's `Bridge` folder has its 256 `s…t.tga` / `s…o.tga` files (they ship with the addon), then `/reload`.
+3. `/slacker status`, then `/reload` and look in `WTF/Account/<account>/SavedVariables/Slacker.lua` for `bridgeLog`: it lists when each change reached the addon. Attach it to an issue.
 
 `/reload` always picks up the current count, so that is the fallback.
 

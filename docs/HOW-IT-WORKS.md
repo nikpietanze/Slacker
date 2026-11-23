@@ -6,31 +6,40 @@ WoW addons run in a sandbox. They can't read files, open sockets, see other proc
 
 An addon *can* load a texture from its own folder. Once loaded, `Texture:GetSize()` on a texture that has no explicit size reports the image's **native pixel size**. That size is the bridge.
 
-## The bridge file
+## Getting past the texture cache
 
-The companion writes `Interface/AddOns/Slacker/Bridge/count.tga`: a blank 8-bit grayscale TGA whose width and height encode one value.
+The client caches each texture it loads. It keeps a texture while anything uses it, and frees unused ones in a cleanup that runs at irregular times: on a real WoW Forever 1.60.1 session, anywhere from 7 to 76 seconds apart. Loading the same file again before a cleanup returns the cached copy, even if the file changed on disk. Loading a file that hasn't been loaded since the last cleanup always reads it fresh.
 
-| Value | Meaning |
-|---|---|
-| code 0 | companion offline (also the 2×2 placeholder shipped with the addon) |
-| code 1–100 | count 0–99 |
-| code 101 | 100 or more, shown as `99+` |
+So the bridge isn't one file but a **ring of 128 slots**, all holding the same value. The addon reads the next slot each second, and holds it only for the frame it takes to measure it. Each slot then rests unused for about two minutes before its next read, by which time a cleanup has almost always freed it. Changes reach the badge in about two seconds instead of waiting for the next cleanup.
 
-Each code maps to a pair of exponents `(a, b)`, and the file is `2^(a+1) × 2^(b+1)` pixels. Pairs are listed diagonal by diagonal (`a+b = 0, 1, 2, …`, each at most 10) so the common small counts give tiny files. Zero notifications is a 2×4 file of 26 bytes, and anything up to 10 stays under 300 bytes. The largest files, for counts in the 90s and `99+`, are about 128 KB, which is still only a cached disk read. Dimensions are always powers of two, as WoW requires.
+This was worked out in game: with a single file read over and over, the badge got stuck on its first change.
 
-The table is built identically in [`codec.go`](../companion/internal/bridge/codec.go) and [`Bridge.lua`](../Bridge.lua). [`addon_test.go`](../companion/internal/addontest/addon_test.go) loads the real Lua and checks every code decodes the same way in both.
+## The bridge files
 
-Writes are atomic: write `count.tga.tmp`, then rename it over `count.tga`. WoW never sees a partial file. The companion rewrites the file only when the count changes, and writes "offline" when it exits cleanly.
+Each slot is two images in `Interface/AddOns/Slacker/Bridge/`: `sNNNt.tga` holds the tens digit and `sNNNo.tga` the ones digit, for `NNN` from `001` to `128`.
+
+| Tens | Ones | Meaning |
+|---|---|---|
+| 0–9 | 0–9 | count 0–99 |
+| marker | 1 | 100 or more, shown as `99+` |
+| marker | marker | companion offline (the placeholders shipped with the addon) |
+
+Each digit 0–10 (10 is the marker) maps to a pair of exponents `(a, b)`, listed diagonal by diagonal (`a+b = 0, 1, 2, …`), and the image is `2^(a+1) × 2^(b+1)` pixels. The largest is 64 pixels, 274 bytes as a 32-bit TGA, so a full update of all 128 slots is under 70 KB. Dimensions are powers of two, as WoW requires, and the images are 32-bit because an 8-bit grayscale TGA didn't load properly on WoW Forever.
+
+The table is built identically in [`codec.go`](../companion/internal/bridge/codec.go) and [`Bridge.lua`](../Bridge.lua). [`addon_test.go`](../companion/internal/addontest/addon_test.go) loads the real Lua and checks every value decodes the same way in both. It also replays the client's caching behavior to check every change shows up within a few seconds.
+
+Each image is written atomically (temp file, then rename), so WoW never reads a partial file. The companion writes the ones digit before the tens digit, and the addon only accepts a value once two reads in a row agree, so a slot caught mid-update is skipped. The companion rewrites the slots only when the count changes, and writes "offline" when it exits cleanly.
 
 ## The addon's read loop
 
-About once a second ([`Bridge.lua`](../Bridge.lua)), the addon:
+Once a second ([`Bridge.lua`](../Bridge.lua)), the addon:
 
-1. Clears its hidden probe texture (`SetTexture(nil)`), so the client can drop its cached copy.
-2. 0.15 s later, sets the texture to the bridge file again.
-3. Waits for `IsObjectLoaded()`, reads `GetSize()`, and decodes the count.
+1. Points two hidden probe textures at the next slot's tens and ones images.
+2. Waits a frame or two for them to load, reads `GetSize()` and releases them right away.
+3. Divides by the measured size of its own 64×64 icon (a safeguard against UI scaling), rounds each to the nearest power of two, and decodes the two digits.
+4. Applies the value once two reads in a row agree.
 
-A size that isn't a valid bridge value is ignored, so a half-loaded texture never flickers the badge. The work is one tiny texture load per second, no `OnUpdate` running between reads, and no combat-restricted API.
+The work is two tiny texture loads per second, nothing running between reads, and no combat-restricted API.
 
 ## Where the count comes from
 

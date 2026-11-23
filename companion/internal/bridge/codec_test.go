@@ -6,46 +6,44 @@ import (
 	"testing"
 )
 
-func TestRoundTrip(t *testing.T) {
-	if len(table) != numCodes {
-		t.Fatalf("table has %d codes, want %d", len(table), numCodes)
-	}
-	for code := 0; code < numCodes; code++ {
-		w, h := Dimensions(code)
-		got, ok := Decode(w, h)
+func TestDigitsRoundTrip(t *testing.T) {
+	for code := 0; code <= CodeForCount(1000); code++ {
+		tens, ones := Digits(code)
+		got, ok := CodeFromDigits(tens, ones)
 		if !ok || got != code {
-			t.Fatalf("code %d -> %dx%d -> %d,%v", code, w, h, got, ok)
+			t.Fatalf("code %d -> %d,%d -> %d,%v", code, tens, ones, got, ok)
 		}
-		if w > 2048 || h > 2048 {
-			t.Fatalf("code %d too large: %dx%d", code, w, h)
-		}
+	}
+	if _, ok := CodeFromDigits(Marker, 5); ok {
+		t.Error("unused marker combination decoded")
 	}
 }
 
-func TestSmallCountsAreTiny(t *testing.T) {
-	if w, h := Dimensions(CodeOffline); w != 2 || h != 2 {
-		t.Fatalf("offline must match the shipped 2x2 placeholder, got %dx%d", w, h)
-	}
-	for n := 0; n <= 10; n++ {
-		if w, h := Dimensions(CodeForCount(n)); w*h > 256 {
-			t.Errorf("count %d uses %dx%d", n, w, h)
+func TestDigitImagesAreTiny(t *testing.T) {
+	seen := map[[2]int]bool{}
+	for d := 0; d < numDigits; d++ {
+		w, h := DigitDims(d)
+		if w*h > 64 {
+			t.Errorf("digit %d is %dx%d", d, w, h)
+		}
+		if seen[[2]int{w, h}] {
+			t.Errorf("digit %d reuses size %dx%d", d, w, h)
+		}
+		seen[[2]int{w, h}] = true
+		if got, ok := DigitFromDims(w, h); !ok || got != d {
+			t.Errorf("digit %d -> %dx%d -> %d", d, w, h, got)
 		}
 	}
-	maxArea := 0
-	for code := 0; code < numCodes; code++ {
-		w, h := Dimensions(code)
-		if w*h > maxArea {
-			maxArea = w * h
-		}
+	if w, h := DigitDims(Marker); w*h*4+18 > 300 {
+		t.Errorf("largest digit image too big: %dx%d", w, h)
 	}
-	t.Logf("largest bridge file: %d bytes", 18+4*maxArea)
 }
 
 func TestCodeForCountClamps(t *testing.T) {
 	if CodeForCount(-5) != CodeForCount(0) {
 		t.Error("negative counts must clamp to 0")
 	}
-	if CodeForCount(100) != CodeForCount(5000) || CodeForCount(100) != numCodes-1 {
+	if CodeForCount(100) != CodeForCount(5000) {
 		t.Error("counts above 99 must share the 99+ code")
 	}
 	if CodeForCount(99) == CodeForCount(100) {
@@ -55,7 +53,7 @@ func TestCodeForCountClamps(t *testing.T) {
 
 func TestWriteAndRead(t *testing.T) {
 	dir := t.TempDir()
-	for _, n := range []int{0, 3, 99, 150} {
+	for _, n := range []int{0, 3, 42, 99, 150} {
 		if err := WriteCode(dir, CodeForCount(n)); err != nil {
 			t.Fatal(err)
 		}
@@ -64,20 +62,34 @@ func TestWriteAndRead(t *testing.T) {
 			t.Fatalf("count %d: read %d, %v", n, code, err)
 		}
 	}
-	if _, err := os.Stat(filepath.Join(dir, "Bridge", "count.tga.tmp")); !os.IsNotExist(err) {
-		t.Error("temp file left behind")
+	entries, _ := os.ReadDir(filepath.Join(dir, BridgeDir))
+	if len(entries) != 2*Slots {
+		t.Errorf("want %d slot files, found %d", 2*Slots, len(entries))
+	}
+	for _, e := range entries {
+		if filepath.Ext(e.Name()) != ".tga" {
+			t.Errorf("leftover file %s", e.Name())
+		}
 	}
 }
 
-// The addon ships Bridge/count.tga; it must decode as "offline".
-func TestShippedPlaceholder(t *testing.T) {
+// The addon ships every slot file as the "offline" placeholder.
+func TestShippedPlaceholders(t *testing.T) {
 	addon := filepath.Join("..", "..", "..") // the addon lives at the repo root
-	code, err := ReadCode(addon)
-	if err != nil {
-		t.Skipf("addon placeholder not found: %v", err)
+	if _, err := os.Stat(filepath.Join(addon, AddonName+".toc")); err != nil {
+		t.Skip("not running inside the repo")
 	}
-	if code != CodeOffline {
-		t.Fatalf("shipped placeholder decodes to %d, want offline", code)
+	for slot := 1; slot <= Slots; slot++ {
+		tf, of := SlotFiles(slot)
+		for _, name := range []string{tf, of} {
+			w, h, err := readDims(filepath.Join(addon, BridgeDir, name))
+			if err != nil {
+				t.Fatalf("missing placeholder %s: %v", name, err)
+			}
+			if d, ok := DigitFromDims(w, h); !ok || d != Marker {
+				t.Fatalf("%s should be the offline marker, is %dx%d", name, w, h)
+			}
+		}
 	}
 }
 

@@ -118,20 +118,25 @@ func itoa(n int) string {
 func TestLuaCodecMatchesGo(t *testing.T) {
 	L, _ := newAddon(t)
 	for code := 0; code <= bridge.CodeForCount(1000); code++ {
-		w, h := bridge.Dimensions(code)
-		got := eval(t, L, "ns.DecodeSize("+itoa(w)+","+itoa(h)+")")
+		tens, ones := bridge.Digits(code)
+		tw, th := bridge.DigitDims(tens)
+		ow, oh := bridge.DigitDims(ones)
+		got := eval(t, L, "ns.DecodeDigits(ns.DecodeDigit("+itoa(tw)+","+itoa(th)+"), ns.DecodeDigit("+itoa(ow)+","+itoa(oh)+"))")
 		want := "false"
 		if code != bridge.CodeOffline {
 			want = itoa(code - 1)
 		}
 		if got != want {
-			t.Fatalf("Lua decodes %dx%d as %s, Go says %s", w, h, got, want)
+			t.Fatalf("Lua decodes code %d (digits %d,%d) as %s, want %s", code, tens, ones, got, want)
 		}
 	}
 	for _, bad := range []string{"0, 0", "1, 1", "2, 0.5"} {
-		if got := eval(t, L, "ns.DecodeSize("+bad+")"); got != "nil" {
-			t.Errorf("DecodeSize(%s) = %s, want nil", bad, got)
+		if got := eval(t, L, "ns.DecodeDigit("+bad+")"); got != "nil" {
+			t.Errorf("DecodeDigit(%s) = %s, want nil", bad, got)
 		}
+	}
+	if got := eval(t, L, "ns.DecodeDigits(10, 5)"); got != "nil" {
+		t.Errorf("unused marker combination decoded as %s", got)
 	}
 }
 
@@ -158,7 +163,7 @@ func TestBadgeFollowsCompanion(t *testing.T) {
 	}
 	for _, s := range steps {
 		must(t, bridge.WriteCode(dir, bridge.CodeForCount(s.count)))
-		run(t, L, "mock.advance(1.5)")
+		run(t, L, "mock.advance(3)")
 		if got := eval(t, L, "ns.count"); got != itoa(min(s.count, bridge.MaxCount+1)) {
 			t.Fatalf("count %d: addon reads %s", s.count, got)
 		}
@@ -180,7 +185,7 @@ func TestBadgeFollowsCompanion(t *testing.T) {
 		}
 	}
 	must(t, bridge.WriteCode(dir, bridge.CodeOffline))
-	run(t, L, "mock.advance(1.5)")
+	run(t, L, "mock.advance(3)")
 	if got := eval(t, L, "ns.count"); got != "false" {
 		t.Fatalf("offline: addon reads %s", got)
 	}
@@ -288,13 +293,13 @@ func TestBridgeSurvivesScreenScaling(t *testing.T) {
 		for _, rounded := range []string{"false", "true"} {
 			t.Run(scale+"/rounded="+rounded, func(t *testing.T) {
 				L, dir := newAddon(t)
-				run(t, L, "mock.texelScale = "+scale+"; mock.roundSizes = "+rounded+"; ns.count = nil; mock.advance(1.5)")
+				run(t, L, "mock.texelScale = "+scale+"; mock.roundSizes = "+rounded+"; ns.count = nil; mock.advance(3)")
 				if got := eval(t, L, "ns.count"); got != "false" {
 					t.Fatalf("placeholder: %s (bridge %s, ref %s)", got, eval(t, L, "ns.lastSize"), eval(t, L, "ns.lastRef"))
 				}
 				for _, n := range []int{0, 1, 2, 3, 7, 12, 42, 98, 99, 150} {
 					must(t, bridge.WriteCode(dir, bridge.CodeForCount(n)))
-					run(t, L, "mock.advance(1.5)")
+					run(t, L, "mock.advance(3)")
 					if got := eval(t, L, "ns.count"); got != itoa(min(n, bridge.MaxCount+1)) {
 						t.Fatalf("count %d read as %s (bridge %s, ref %s)", n, got, eval(t, L, "ns.lastSize"), eval(t, L, "ns.lastRef"))
 					}
@@ -323,7 +328,7 @@ func TestPulseSetting(t *testing.T) {
 	L, dir := newAddon(t)
 	must(t, bridge.WriteCode(dir, bridge.CodeForCount(4)))
 	run(t, L, `
-		mock.advance(1.5)
+		mock.advance(3)
 		assert(ns.ui.haloAnim:IsPlaying(), "pulses while unread")
 		mock.settings.pulse:SetValue(false)
 		assert(not ns.ui.haloAnim:IsPlaying(), "turning the setting off stops it")
@@ -331,5 +336,58 @@ func TestPulseSetting(t *testing.T) {
 		assert(ns.ui.haloAnim:IsPlaying(), "turning it back on resumes")
 	`)
 	must(t, bridge.WriteCode(dir, bridge.CodeForCount(0)))
-	run(t, L, `mock.advance(1.5); assert(not ns.ui.haloAnim:IsPlaying(), "stops once read")`)
+	run(t, L, `mock.advance(3); assert(not ns.ui.haloAnim:IsPlaying(), "stops once read")`)
+}
+
+// The client caches textures until an irregular cleanup frees unused ones
+// (7 to 76 s apart in a real 1.60.1 session). Reading the same file again
+// would stay stale until a cleanup; the slot ring must pick up every change
+// within a few seconds anyway.
+func TestSlotsBeatTheTextureCache(t *testing.T) {
+	L, dir := newAddon(t)
+	run(t, L, `
+		mock.cache = {}
+		mock.sweepGaps = { 43, 76, 7, 23, 61, 15, 70 }
+		mock.sweepIndex = 1
+		mock.sweepAt = GetTime() + mock.sweepGaps[1]
+		mock.advance(5)
+	`)
+	steps := []int{7, 1, 12, 0, 3, 99, 150, 2, 0, 41, 5, 18}
+	for i, n := range steps {
+		must(t, bridge.WriteCode(dir, bridge.CodeForCount(n)))
+		// Each value must show up within 3 s, however the cleanups fall.
+		run(t, L, "mock.advance(3)")
+		want := itoa(min(n, bridge.MaxCount+1))
+		if got := eval(t, L, "ns.count"); got != want {
+			t.Fatalf("step %d: wrote %d, addon shows %s after 3 s", i, n, got)
+		}
+		run(t, L, "mock.advance(17)") // 20 s per step, several minutes in all
+	}
+}
+
+// Without the ring (one file read over and over) the same cache keeps the
+// first value until a cleanup: this is what failed in game. Guards the test
+// above against a mock that never caches.
+func TestOneFileWouldStayStale(t *testing.T) {
+	L, dir := newAddon(t)
+	run(t, L, `
+		mock.cache = {}
+		mock.advance(3)
+		local probe = CreateFrame("Frame"):CreateTexture()
+		probe:SetPoint("TOPLEFT")
+		probe:SetTexture([[Interface\AddOns\Slacker\Bridge\s001o.tga]])
+		first = probe:GetSize()
+		probe:SetTexture(nil)
+	`)
+	must(t, bridge.WriteCode(dir, bridge.CodeForCount(7)))
+	run(t, L, `
+		local probe = CreateFrame("Frame"):CreateTexture()
+		probe:SetPoint("TOPLEFT")
+		probe:SetTexture([[Interface\AddOns\Slacker\Bridge\s001o.tga]])
+		assert(probe:GetSize() == first, "same file stays cached until a cleanup")
+		probe:SetTexture(nil)
+		mock.sweep()
+		probe:SetTexture([[Interface\AddOns\Slacker\Bridge\s001o.tga]])
+		assert(probe:GetSize() ~= first, "after a cleanup it reads the new file")
+	`)
 }

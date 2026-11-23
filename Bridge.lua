@@ -1,38 +1,40 @@
 -- Reads the notification count from the companion app.
 --
--- Addons can't read files, but they can load a texture and ask for its native
--- size. The companion writes Bridge\count.tga with a width and height that
--- encode the count, and we reload it about once a second.
+-- Addons can't read files, but they can load a texture and ask for its size.
+-- The companion writes tiny blank images whose sizes encode the count, and
+-- this file reads them. See docs/HOW-IT-WORKS.md for the whole story.
 
 local ADDON_NAME, ns = ...
 
-local BRIDGE_PATH = [[Interface\AddOns\]] .. ADDON_NAME .. [[\Bridge\count.tga]]
+local BRIDGE = [[Interface\AddOns\]] .. ADDON_NAME .. [[\Bridge\]]
 
 ---------------------------------------------------------------------------
--- Codec. Mirror of companion/internal/bridge/codec.go: code n maps to
--- exponents (a, b), enumerated by diagonals a+b = 0, 1, 2, ..., each <= 10,
--- and the texture is 2^(a+1) x 2^(b+1) px.
---   code 0       companion offline (the 2x2 placeholder shipped with the addon)
---   code 1..100  count 0..99
---   code 101     100 or more ("99+")
+-- Codec. Mirror of companion/internal/bridge/codec.go.
 --
--- GetSize() reports UI units, not file pixels: on a Retina screen or with a
--- UI scale, a 2x2 file can measure 1x1. So every read also measures a texture
--- of known size (the 64x64 icon) and scales by that, then rounds to the
--- nearest power of two, which tolerates any leftover rounding.
+-- The count is split over two images per slot, a tens digit and a ones digit.
+-- Each holds a digit 0..10 (10 is a marker): digit d is the d-th exponent
+-- pair (a, b), enumerated by diagonals a+b = 0, 1, 2, ..., and the image is
+-- 2^(a+1) x 2^(b+1) px.
+--   tens 0..9, ones 0..9   count 0..99
+--   tens 10,   ones 1      100 or more ("99+")
+--   tens 10,   ones 10     companion offline (the placeholders we ship)
+--
+-- The images are 32-bit: an 8-bit grayscale image measured 1x1 on a real
+-- client. As a safeguard against UI scaling, every read also measures a
+-- texture of known size (the 64x64 icon), scales by that, and rounds to the
+-- nearest power of two.
 ---------------------------------------------------------------------------
-local MAX_EXP = 10
-local NUM_CODES = ns.MAX_COUNT + 3
+local SLOTS = 128
+local MARKER = 10
 local REF_SIZE = 64 -- Media\Icon.tga
 local LOG2 = math.log(2)
-local codeByExp = {}
+local digitByExp = {}
 do
 	local n, s = 0, 0
-	while n < NUM_CODES do
+	while n <= MARKER do
 		for a = 0, s do
-			local b = s - a
-			if n < NUM_CODES and a <= MAX_EXP and b <= MAX_EXP then
-				codeByExp[a .. "," .. b] = n
+			if n <= MARKER then
+				digitByExp[a .. "," .. (s - a)] = n
 				n = n + 1
 			end
 		end
@@ -46,18 +48,26 @@ local function exponent(texels)
 	return math.floor(math.log(texels) / LOG2 + 0.5) - 1
 end
 
--- Decodes a measured size. scaleW/scaleH convert UI units to file pixels
--- (measured reference size / real reference size); 1 when omitted.
--- Returns the count (0..100, 100 meaning 99+), false when the companion is
--- offline, or nil when the size isn't a bridge value (e.g. not loaded yet).
-function ns.DecodeSize(w, h, scaleW, scaleH)
+-- A measured image size -> digit 0..10, or nil. scaleW/scaleH convert UI
+-- units to file pixels (1 when omitted).
+function ns.DecodeDigit(w, h, scaleW, scaleH)
 	if not w or not h or w <= 0 or h <= 0 then return nil end
 	local a, b = exponent(w / (scaleW or 1)), exponent(h / (scaleH or 1))
 	if not a or not b then return nil end
-	local code = codeByExp[a .. "," .. b]
-	if code == nil then return nil end
-	if code == 0 then return false end
-	return code - 1
+	return digitByExp[a .. "," .. b]
+end
+
+-- Two digits -> the count (0..100, 100 meaning 99+), false when the companion
+-- is offline, or nil for combinations the companion never writes.
+function ns.DecodeDigits(tens, ones)
+	if tens == nil or ones == nil then return nil end
+	if tens == MARKER then
+		if ones == MARKER then return false end
+		if ones == 1 then return ns.MAX_COUNT + 1 end
+		return nil
+	end
+	if ones == MARKER then return nil end
+	return tens * 10 + ones
 end
 
 ---------------------------------------------------------------------------
@@ -81,28 +91,34 @@ local function setCount(value, fromTest)
 end
 
 ---------------------------------------------------------------------------
--- Poller. The probe texture has no size of its own and a single anchor, so
--- once loaded, GetSize() reports the file's pixel size.
+-- Poller.
 --
--- The client keeps a texture in memory while anything uses it, and only
--- drops unused textures in a periodic sweep; after that, loading the path
--- again reads the file from disk. So the probe holds the bridge texture
--- only for the frame or two it takes to measure it. Holding it all the
--- time (as early versions did) means the sweep never frees it and the
--- count never changes after the first read.
+-- The client keeps a texture cached until a periodic cleanup frees unused
+-- ones (irregularly, from seconds to over a minute apart on 1.60.1), so
+-- loading the same file again usually returns the old size. A file that
+-- hasn't been loaded since the last cleanup is always read from disk.
+-- The companion writes the count into SLOTS identical slots and we read the
+-- next one each second, so each slot rests for about two minutes between
+-- reads: long enough that a cleanup has almost always freed it.
+--
+-- The probes hold a slot only for the frame or two it takes to measure it,
+-- so it's unused (and can be freed) the rest of the time. A value counts
+-- only once two reads in a row agree, which skips a slot caught mid-write.
 ---------------------------------------------------------------------------
 local probeFrame = CreateFrame("Frame", nil, UIParent)
 probeFrame:SetSize(1, 1)
 probeFrame:SetPoint("BOTTOMLEFT")
-local probe = probeFrame:CreateTexture(nil, "BACKGROUND")
-probe:SetPoint("TOPLEFT")
-probe:SetAlpha(0)
--- Same setup with a texture of known size, to measure the screen scaling.
-local ref = probeFrame:CreateTexture(nil, "BACKGROUND")
-ref:SetPoint("TOPLEFT")
-ref:SetAlpha(0)
+local function probeTexture()
+	local t = probeFrame:CreateTexture(nil, "BACKGROUND")
+	t:SetPoint("TOPLEFT") -- one anchor and no size: GetSize() is the file's size
+	t:SetAlpha(0)
+	return t
+end
+local tensProbe, onesProbe, ref = probeTexture(), probeTexture(), probeTexture()
 
+local slot = 0
 local waiting, waitStart = false, 0
+local candidate -- last decoded value, applied once a second read agrees
 local LOG_SIZE = 30
 
 -- Keeps the last few changes (with times) in the saved settings, so a bug
@@ -110,34 +126,47 @@ local LOG_SIZE = 30
 local function logChange(value)
 	local log = ns.db.bridgeLog or {}
 	ns.db.bridgeLog = log
-	log[#log + 1] = ("%s %s -> %s"):format(date("%H:%M:%S"), ns.lastSize, tostring(value))
+	log[#log + 1] = ("%s slot %d %s -> %s"):format(date("%H:%M:%S"), slot, ns.lastSize, tostring(value))
 	while #log > LOG_SIZE do table.remove(log, 1) end
+end
+
+local function loaded(t)
+	return (not t.IsObjectLoaded or t:IsObjectLoaded()) and (t:GetSize()) > 0
 end
 
 local function finishProbe()
 	waiting = false
 	probeFrame:SetScript("OnUpdate", nil)
-	local w, h = probe:GetSize()
-	probe:SetTexture(nil) -- let go right away so the client can drop it
+	local tw, th = tensProbe:GetSize()
+	local ow, oh = onesProbe:GetSize()
+	-- Let go right away so the cleanup can free them.
+	tensProbe:SetTexture(nil)
+	onesProbe:SetTexture(nil)
 	local rw, rh = ref:GetSize()
-	ns.lastSize = ("%.2fx%.2f"):format(w, h)
+	ns.lastSize = ("%.0fx%.0f+%.0fx%.0f"):format(tw, th, ow, oh)
 	ns.lastRef = ("%.2fx%.2f"):format(rw, rh)
 	ns.lastRead = GetTime()
 	local value
 	if rw > 0 and rh > 0 then
-		value = ns.DecodeSize(w, h, rw / REF_SIZE, rh / REF_SIZE)
+		local sw, sh = rw / REF_SIZE, rh / REF_SIZE
+		value = ns.DecodeDigits(ns.DecodeDigit(tw, th, sw, sh), ns.DecodeDigit(ow, oh, sw, sh))
 	end
 	if ns.debug then
-		ns.Print(("bridge %s, reference %s -> %s"):format(ns.lastSize, ns.lastRef, tostring(value)))
+		ns.Print(("slot %d: %s, reference %s -> %s"):format(slot, ns.lastSize, ns.lastRef, tostring(value)))
 	end
-	if value ~= nil and value ~= ns.count then logChange(value) end
-	if value ~= nil then setCount(value) end
+	if value == nil then
+		candidate = nil
+		return
+	end
+	if value == candidate and value ~= ns.count then
+		logChange(value)
+		setCount(value)
+	end
+	candidate = value
 end
 
 local function onProbeUpdate()
-	local loaded = not probe.IsObjectLoaded or probe:IsObjectLoaded()
-	local w = probe:GetSize()
-	if (loaded and w and w > 0) or GetTime() - waitStart > 2 then
+	if (loaded(tensProbe) and loaded(onesProbe)) or GetTime() - waitStart > 2 then
 		finishProbe()
 	end
 end
@@ -145,7 +174,10 @@ end
 local function readBridge()
 	if waiting then return end
 	waiting = true
-	probe:SetTexture(BRIDGE_PATH)
+	slot = slot % SLOTS + 1
+	local name = ("s%03d"):format(slot)
+	tensProbe:SetTexture(BRIDGE .. name .. "t.tga")
+	onesProbe:SetTexture(BRIDGE .. name .. "o.tga")
 	waitStart = GetTime()
 	probeFrame:SetScript("OnUpdate", onProbeUpdate)
 end
@@ -167,7 +199,8 @@ function ns.RunTest()
 		C_Timer.After((i - 1) * stepTime, function() setCount(n, true) end)
 	end
 	C_Timer.After(#steps * stepTime + 0.2, function()
-		ns.count = nil -- the next real reading applies without a flash
-		readBridge()
+		-- The next real reading applies without a flash.
+		ns.count = nil
+		candidate = nil
 	end)
 end
