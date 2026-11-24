@@ -183,58 +183,67 @@ local function readBridge()
 end
 
 ---------------------------------------------------------------------------
--- EXPERIMENT (not for release): does a different upper/lower case spelling
--- of a path get its own cache entry? The companion side flips s128o between
--- 2x2 and 2x4 every 5 s of wall-clock time. Each second we read it through the
--- usual spelling and through a never-used spelling, and log both.
+-- EXPERIMENT 2 (not for release). The companion side flips s128o between
+-- 2x2 and 2x4 every 5 s of wall-clock time, and also creates a brand-new file
+-- Bridge\n<epoch>.tga (same value) every second. Each second we read:
+--   A  s128o through the usual path (control: cached)
+--   D  s128o through a path with ".\" segments, unique each read
+--   S  s128o through a path with doubled "\\" separators, unique each read
+--   N  the brand-new file from two seconds ago (are new files visible?)
+--   M  a file that never exists
 ---------------------------------------------------------------------------
-local EXP_SECONDS = 240
-local expTail = "bridge\\s128o.tga"
-local function variant(n)
-	local out, bit = {}, 0
-	for i = 1, #expTail do
-		local c = expTail:sub(i, i)
-		if c:match("%a") then
-			if math.floor(n / 2 ^ bit) % 2 == 1 then c = c:upper() end
-			bit = bit + 1
-		end
-		out[i] = c
+local EXP_SECONDS = 120
+local function spread(n, sep)
+	-- n -> four counts 0..3 (base 4), each a run of sep after one folder
+	local parts = { "Interface", "AddOns", ADDON_NAME, "Bridge" }
+	local out = {}
+	for i, part in ipairs(parts) do
+		local k = math.floor(n / 4 ^ (i - 1)) % 4
+		out[#out + 1] = part .. "\\" .. string.rep(sep, k)
 	end
-	return [[Interface\AddOns\]] .. ADDON_NAME .. "\\" .. table.concat(out)
+	return table.concat(out)
 end
-local expA, expB = probeTexture(), probeTexture()
+local probes = {}
+for _, k in ipairs({ "A", "D", "S", "N", "M" }) do probes[k] = probeTexture() end
 local function expStart()
 	local log = {}
-	ns.db.cacheExp = log
-	local n, stop = 1, GetTime() + EXP_SECONDS -- n = 1 would be the usual spelling
+	ns.db.cacheExp2 = log
+	local n, stop, done = 0, GetTime() + EXP_SECONDS, false
 	local frame = CreateFrame("Frame")
-	local done = false
 	C_Timer.NewTicker(1, function()
 		if done then return end
 		if GetTime() > stop then done = true; log[#log + 1] = "done"; return end
 		n = n + 1
 		local t0 = time()
-		expA:SetTexture(BRIDGE .. "s128o.tga")
-		local aNow = expA:IsObjectLoaded() and "C" or "-"
-		local path = variant(n)
-		expB:SetTexture(path)
-		local bNow = expB:IsObjectLoaded() and "C" or "-"
+		local paths = {
+			A = BRIDGE .. "s128o.tga",
+			D = spread(n, ".\\") .. "s128o.tga",
+			S = spread(n, "\\") .. "s128o.tga",
+			N = BRIDGE .. "n" .. (t0 - 2) .. ".tga",
+			M = BRIDGE .. "missing" .. n .. ".tga",
+		}
+		local now = {}
+		for k, path in pairs(paths) do
+			local ok = probes[k]:SetTexture(path)
+			now[k] = (probes[k]:IsObjectLoaded() and "C" or "-") .. (ok and "" or "!")
+		end
 		local frames = 0
 		frame:SetScript("OnUpdate", function(self)
 			frames = frames + 1
-			local aw, ah = expA:GetSize()
-			local bw, bh = expB:GetSize()
-			if (aw > 0 and bw > 0) or frames > 60 then
-				self:SetScript("OnUpdate", nil)
-				log[#log + 1] = ("%d %d A%s%.0fx%.0f B%s%.0fx%.0f f%d %s"):format(
-					t0, math.floor(t0 / 5) % 2, aNow, aw, ah, bNow, bw, bh, frames, path:sub(-16))
-				expA:SetTexture(nil)
-				expB:SetTexture(nil)
+			if frames < 30 then return end -- half a second for everything to load
+			self:SetScript("OnUpdate", nil)
+			local line = { t0, math.floor(t0 / 5) % 2, math.floor((t0 - 2) / 5) % 2 }
+			for _, k in ipairs({ "A", "D", "S", "N", "M" }) do
+				local w, h = probes[k]:GetSize()
+				line[#line + 1] = ("%s%s%.0fx%.0f"):format(k, now[k], w, h)
+				probes[k]:SetTexture(nil)
 			end
+			if n <= 3 then line[#line + 1] = paths.D .. " " .. paths.S end
+			log[#log + 1] = table.concat(line, " ")
 		end)
 	end)
-	ns.Print("cache experiment running for " .. EXP_SECONDS .. " s. /reload after it says done.")
-	C_Timer.After(EXP_SECONDS + 2, function() ns.Print("cache experiment done, please /reload") end)
+	ns.Print("cache experiment 2 running for " .. EXP_SECONDS .. " s. /reload after it says done.")
+	C_Timer.After(EXP_SECONDS + 2, function() ns.Print("cache experiment 2 done, please /reload") end)
 end
 
 ns.OnLogin(function()
