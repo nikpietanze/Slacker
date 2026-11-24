@@ -183,31 +183,27 @@ local function readBridge()
 end
 
 ---------------------------------------------------------------------------
--- EXPERIMENT 2 (not for release). The companion side flips s128o between
--- 2x2 and 2x4 every 5 s of wall-clock time, and also creates a brand-new file
--- Bridge\n<epoch>.tga (same value) every second. Each second we read:
---   A  s128o through the usual path (control: cached)
---   D  s128o through a path with ".\" segments, unique each read
---   S  s128o through a path with doubled "\\" separators, unique each read
---   N  the brand-new file from two seconds ago (are new files visible?)
---   M  a file that never exists
+-- EXPERIMENT 3 (not for release). The companion side flips s128o between
+-- 2x2 and 2x4 every 5 s of wall-clock time. Each second we read:
+--   A  s128o plainly (control: cached)
+--   W  s128o with a never-used combination of wrap and filter modes
+--   X  s128o without its extension / with ".TGA" (only on the first reads)
 ---------------------------------------------------------------------------
 local EXP_SECONDS = 120
-local function spread(n, sep)
-	-- n -> four counts 0..3 (base 4), each a run of sep after one folder
-	local parts = { "Interface", "AddOns", ADDON_NAME, "Bridge" }
-	local out = {}
-	for i, part in ipairs(parts) do
-		local k = math.floor(n / 4 ^ (i - 1)) % 4
-		out[#out + 1] = part .. "\\" .. string.rep(sep, k)
-	end
-	return table.concat(out)
+local WRAPS = { "CLAMP", "REPEAT", "MIRROR", "CLAMPTOBLACK", "CLAMPTOBLACKADDITIVE", "CLAMPTOWHITE" }
+local FILTERS = { "LINEAR", "TRILINEAR", "NEAREST" }
+local function combo(n)
+	-- n = 1.. -> a distinct (wrapH, wrapV, filter); n = 0 would be the default
+	local h = n % #WRAPS
+	local v = math.floor(n / #WRAPS) % #WRAPS
+	local f = math.floor(n / (#WRAPS * #WRAPS)) % #FILTERS
+	return WRAPS[h + 1], WRAPS[v + 1], FILTERS[f + 1]
 end
 local probes = {}
-for _, k in ipairs({ "A", "D", "S", "N", "M" }) do probes[k] = probeTexture() end
+for _, k in ipairs({ "A", "W", "X" }) do probes[k] = probeTexture() end
 local function expStart()
 	local log = {}
-	ns.db.cacheExp2 = log
+	ns.db.cacheExp3 = log
 	local n, stop, done = 0, GetTime() + EXP_SECONDS, false
 	local frame = CreateFrame("Frame")
 	C_Timer.NewTicker(1, function()
@@ -215,35 +211,32 @@ local function expStart()
 		if GetTime() > stop then done = true; log[#log + 1] = "done"; return end
 		n = n + 1
 		local t0 = time()
-		local paths = {
-			A = BRIDGE .. "s128o.tga",
-			D = spread(n, ".\\") .. "s128o.tga",
-			S = spread(n, "\\") .. "s128o.tga",
-			N = BRIDGE .. "n" .. (t0 - 2) .. ".tga",
-			M = BRIDGE .. "missing" .. n .. ".tga",
-		}
+		local h, v, f = combo(n)
 		local now = {}
-		for k, path in pairs(paths) do
-			local ok = probes[k]:SetTexture(path)
-			now[k] = (probes[k]:IsObjectLoaded() and "C" or "-") .. (ok and "" or "!")
-		end
+		local ok = probes.A:SetTexture(BRIDGE .. "s128o.tga")
+		now.A = (probes.A:IsObjectLoaded() and "C" or "-") .. (ok and "" or "!")
+		ok = probes.W:SetTexture(BRIDGE .. "s128o.tga", h, v, f)
+		now.W = (probes.W:IsObjectLoaded() and "C" or "-") .. (ok and "" or "!")
+		local xpath = n % 2 == 1 and "s128o" or "s128o.TGA"
+		ok = probes.X:SetTexture(BRIDGE .. xpath)
+		now.X = (probes.X:IsObjectLoaded() and "C" or "-") .. (ok and "" or "!")
 		local frames = 0
 		frame:SetScript("OnUpdate", function(self)
 			frames = frames + 1
-			if frames < 30 then return end -- half a second for everything to load
+			if frames < 30 then return end
 			self:SetScript("OnUpdate", nil)
-			local line = { t0, math.floor(t0 / 5) % 2, math.floor((t0 - 2) / 5) % 2 }
-			for _, k in ipairs({ "A", "D", "S", "N", "M" }) do
-				local w, h = probes[k]:GetSize()
-				line[#line + 1] = ("%s%s%.0fx%.0f"):format(k, now[k], w, h)
+			local line = { t0, math.floor(t0 / 5) % 2 }
+			for _, k in ipairs({ "A", "W", "X" }) do
+				local w, ht = probes[k]:GetSize()
+				line[#line + 1] = ("%s%s%.0fx%.0f"):format(k, now[k], w, ht)
 				probes[k]:SetTexture(nil)
 			end
-			if n <= 3 then line[#line + 1] = paths.D .. " " .. paths.S end
+			line[#line + 1] = h .. "/" .. v .. "/" .. f .. " " .. xpath
 			log[#log + 1] = table.concat(line, " ")
 		end)
 	end)
-	ns.Print("cache experiment 2 running for " .. EXP_SECONDS .. " s. /reload after it says done.")
-	C_Timer.After(EXP_SECONDS + 2, function() ns.Print("cache experiment 2 done, please /reload") end)
+	ns.Print("cache experiment 3 running for " .. EXP_SECONDS .. " s. /reload after it says done.")
+	C_Timer.After(EXP_SECONDS + 2, function() ns.Print("cache experiment 3 done, please /reload") end)
 end
 
 ns.OnLogin(function()
