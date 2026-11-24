@@ -370,30 +370,81 @@ func TestNewNotificationAlert(t *testing.T) {
 	`)
 }
 
-// The client caches textures until an irregular cleanup frees unused ones
-// (7 to 76 s apart in a real 1.60.1 session). Reading the same file again
-// would stay stale until a cleanup; the slot ring must pick up every change
-// within a few seconds anyway.
-func TestSlotsBeatTheTextureCache(t *testing.T) {
-	L, dir := newAddon(t)
-	run(t, L, `
-		mock.cache = {}
-		mock.sweepGaps = { 43, 76, 7, 23, 61, 15, 70 }
-		mock.sweepIndex = 1
-		mock.sweepAt = GetTime() + mock.sweepGaps[1]
-		mock.advance(5)
-	`)
-	steps := []int{7, 1, 12, 0, 3, 99, 150, 2, 0, 41, 5, 18}
-	for i, n := range steps {
-		must(t, bridge.WriteCode(dir, bridge.CodeForCount(n)))
-		// Each value must show up within 3 s, however the cleanups fall.
-		run(t, L, "mock.advance(3)")
-		want := itoa(min(n, bridge.MaxCount+1))
-		if got := eval(t, L, "ns.count"); got != want {
-			t.Fatalf("step %d: wrote %d, addon shows %s after 3 s", i, n, got)
+// The client caches each texture it loads, keyed by file and load modes, and
+// may keep unused entries for many minutes: on a live 1.60.1 client one sat in
+// the cache for over 9 minutes, so a reused key showed a count from long ago.
+// Every change must show up within a few seconds, and never flip back, whether
+// cleanups run often or not at all.
+func TestFreshReadsBeatTheTextureCache(t *testing.T) {
+	for _, sweeps := range []string{"nil", "{ 43, 76, 7, 23, 61, 15, 70 }"} {
+		L, dir := newAddon(t)
+		run(t, L, `
+			mock.cache = {}
+			mock.sweepGaps = `+sweeps+`
+			if mock.sweepGaps then
+				mock.sweepIndex = 1
+				mock.sweepAt = GetTime() + mock.sweepGaps[1]
+			end
+			mock.advance(5)
+		`)
+		steps := []int{7, 1, 12, 0, 3, 99, 150, 2, 0, 41, 5, 18}
+		for i, n := range steps {
+			must(t, bridge.WriteCode(dir, bridge.CodeForCount(n)))
+			want := itoa(min(n, bridge.MaxCount+1))
+			// Each value must show up within 3 s...
+			run(t, L, "mock.advance(3)")
+			if got := eval(t, L, "ns.count"); got != want {
+				t.Fatalf("sweeps %s, step %d: wrote %d, addon shows %s after 3 s", sweeps, i, n, got)
+			}
+			// ...and stay, through several laps of the slots.
+			for s := 0; s < 300; s += 10 {
+				run(t, L, "mock.advance(10)")
+				if got := eval(t, L, "ns.count"); got != want {
+					t.Fatalf("sweeps %s, step %d: wrote %d, addon flipped to %s after %d s", sweeps, i, n, got, s+13)
+				}
+			}
 		}
-		run(t, L, "mock.advance(17)") // 20 s per step, several minutes in all
+		if got := eval(t, L, "ns.cachedSkips"); got != "0" {
+			t.Errorf("sweeps %s: no key should come up twice in an hour, but %s were cached", sweeps, got)
+		}
 	}
+}
+
+// If keys do come round again (hours of play, or a client that keeps them
+// across /reload), the cached copies are skipped, never shown.
+func TestStaleCopiesAreSkipped(t *testing.T) {
+	L, dir := newAddon(t)
+	run(t, L, `mock.cache = {}; mock.advance(3)`)
+	must(t, bridge.WriteCode(dir, bridge.CodeForCount(1)))
+	run(t, L, `mock.advance(400); assert(ns.count == 1)`)
+	must(t, bridge.WriteCode(dir, bridge.CodeForCount(0)))
+	run(t, L, `
+		-- Go back over keys that are cached with the old count.
+		SlackerDB.bridgeKey = SlackerDB.bridgeKey - 390
+		local cleared
+		for i = 1, 120 do
+			mock.advance(1)
+			if ns.count == 0 then cleared = cleared or i end
+			assert(not cleared or ns.count == 0, "flipped back to a stale count after " .. i .. " s")
+		end
+		assert(cleared and cleared <= 20, "cleared after " .. tostring(cleared) .. " s")
+		assert(ns.cachedSkips >= 380, "skipped " .. ns.cachedSkips .. " cached keys")
+	`)
+}
+
+// Every key is a distinct slot and load-mode combination.
+func TestBridgeKeysAreDistinct(t *testing.T) {
+	L, _ := newAddon(t)
+	run(t, L, `
+		local seen = {}
+		for n = 0, ns.BRIDGE_KEYS - 1 do
+			local key = table.concat({ ns.BridgeKeyAt(n) }, "|")
+			assert(not seen[key], "key " .. n .. " repeats " .. key)
+			seen[key] = true
+		end
+		assert(ns.BRIDGE_KEYS == 128 * 6 * 6 * 3)
+		assert(table.concat({ ns.BridgeKeyAt(ns.BRIDGE_KEYS) }, "|") == table.concat({ ns.BridgeKeyAt(0) }, "|"))
+	`)
 }
 
 // Without the ring (one file read over and over) the same cache keeps the

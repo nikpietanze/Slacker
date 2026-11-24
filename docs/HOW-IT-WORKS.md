@@ -8,11 +8,23 @@ An addon *can* load a texture from its own folder. Once loaded, `Texture:GetSize
 
 ## Getting past the texture cache
 
-The client caches each texture it loads. It keeps a texture while anything uses it, and frees unused ones in a cleanup that runs at irregular times: on a real WoW Forever 1.60.1 session, anywhere from 7 to 76 seconds apart. Loading the same file again before a cleanup returns the cached copy, even if the file changed on disk. Loading a file that hasn't been loaded since the last cleanup always reads it fresh.
+The client caches each texture it loads, and loading it again returns the cached copy, even if the file changed on disk. Unused copies are freed only now and then: while you're moving around, cleanups came 7 to 76 seconds apart, but standing idle in a city, a copy stayed cached for over 9 minutes. A `/reload` clears the cache.
 
-So the bridge isn't one file but a **ring of 128 slots**, all holding the same value. The addon reads the next slot each second, and holds it only for the frame it takes to measure it. Each slot then rests unused for about two minutes before its next read, by which time a cleanup has almost always freed it. Changes reach the badge in about two seconds instead of waiting for the next cleanup.
+Tested on a live WoW Forever 1.60.1 client:
 
-This was worked out in game: with a single file read over and over, the badge got stuck on its first change.
+| Trick | Fresh read? |
+|---|---|
+| Same path again | No, cached until a cleanup |
+| Same path in different upper/lower case, or with or without `.tga` | No, same cache entry |
+| Path with `.\` or doubled `\` | Doesn't load |
+| A file created after the game started | Doesn't load: the client indexes the AddOns folder at startup |
+| Same path loaded with different wrap and filter modes | **Yes, every combination has its own cache entry** |
+
+`SetTexture(path, wrapH, wrapV, filter)` takes 6 wrap modes for each direction and 3 filter modes: 108 combinations per file. So the bridge is a **set of 128 slots**, all holding the same value, and the addon steps through every slot and load-mode combination, about 13,800 keys, one per second. Nearly four hours pass before any key comes round again, and the position is saved, so a `/reload` carries on from there.
+
+As a safety net, the addon can tell a cached copy from a fresh read: a fresh load takes a frame or more, while a cached texture reports loaded the moment it's set. A key that turns out to be cached is skipped, never shown, and the addon tries the next one. If every key it tries is cached for over a minute, it says so in chat and suggests a `/reload`.
+
+Earlier versions read each slot about every two minutes and relied on a cleanup having freed it in between. While idle, that showed counts from minutes earlier, including false alerts for notifications already read.
 
 ## The bridge files
 
@@ -34,7 +46,7 @@ Each image is written atomically (temp file, then rename), so WoW never reads a 
 
 Once a second ([`Bridge.lua`](../Bridge.lua)), the addon:
 
-1. Points two hidden probe textures at the next slot's tens and ones images.
+1. Points two hidden probe textures at the next key: a slot's tens and ones images, with that key's wrap and filter modes. If they report loaded at once, they're a cached copy: it skips to the next key.
 2. Waits a frame or two for them to load, reads `GetSize()` and releases them right away.
 3. Divides by the measured size of its own 64×64 icon (a safeguard against UI scaling), rounds each to the nearest power of two, and decodes the two digits.
 4. Applies the value once two reads in a row agree.

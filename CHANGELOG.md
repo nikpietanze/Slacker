@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed the badge showing old counts: while you stood idle, the game could hand back a copy of the companion's file from minutes earlier, so the badge popped up for notifications you'd already read, and was slow to clear. Slacker now gets a fresh reading every time, and skips any stale copy.
 - A new notification now gets a much louder alert: three rounds of a bright flash, a red ring rippling out from the icon, and the bubble bouncing. The slow pulse afterwards stays on as a quieter reminder until you've read it.
 
 ## 1.0.0
