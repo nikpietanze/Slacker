@@ -51,7 +51,7 @@ Everything is under **Esc → Options → AddOns → Slacker** (or type `/slacke
 | Section | Settings |
 |---|---|
 | Icon | Lock position, tooltip, icon size (20 to 64 px), badge size, opacity, plus Move and Reset |
-| New notifications | Flash, sound (built-in or your SharedMedia sounds), plus Test |
+| New notifications | Alert animation, pulse until read, sound (built-in or your SharedMedia sounds), plus Test |
 | Companion app | Remind me when it isn't running, plus Get it (shows the download link) |
 
 The panel's **Defaults** button restores everything. To move the icon, click **Move** (or type `/slacker move`) to open Edit Mode, then drag it. Select it there to change its size and opacity. While it's unlocked, you can also just drag it.

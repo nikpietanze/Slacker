@@ -19,7 +19,7 @@ local DEFAULTS = {
 	opacity = 100, -- Percent.
 	positions = {}, -- Icon position per Edit Mode layout, plus "default".
 	-- Alerts
-	flash = true, -- A quick flash when a new notification arrives.
+	flash = true, -- A loud alert (flash, ripple, bounce) when a new notification arrives.
 	pulse = true, -- Keep a gentle pulse going until they're read.
 	sound = "none", -- "none", "kit:<SOUNDKIT key>" or "lsm:<LibSharedMedia name>"
 	-- Companion

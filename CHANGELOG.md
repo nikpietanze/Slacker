@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- A new notification now gets a much louder alert: three rounds of a bright flash, a red ring rippling out from the icon, and the bubble bouncing. The slow pulse afterwards stays on as a quieter reminder until you've read it.
+
 ## 1.0.0
 
 First release.

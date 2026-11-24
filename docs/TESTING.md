@@ -34,7 +34,7 @@ Slacker's logic and the companion are covered by tests outside the game (`make t
 |---|---|
 | States | No notifications: muted gray bubble. Notifications: full-color bubble with a red badge. 10 and up stretches the badge into a pill. 100 and up shows `99+`. |
 | Tooltip | Hover shows `Slack: N notifications`, the time of the last one, and the hint line. Turning **Tooltip** off hides it. |
-| New notification | The icon flashes three times. With a sound chosen, it plays once. Neither happens at login or after `/reload`. |
+| New notification | Three rounds of a bright flash, a red ring rippling out and the bubble bouncing (about 2.5 seconds). Then only the slow pulse stays on until it's read. With a sound chosen, it plays once. None of this happens at login or after `/reload`. |
 | Drag | While unlocked, dragging moves the icon, and the position survives `/reload`. Locked, dragging does nothing. |
 | Edit Mode | **Move** opens Edit Mode with a selection box labeled "Slacker" and a sample badge. Dragging saves. Selecting it shows Icon size, Badge size, Opacity and More options. Switching Edit Mode layouts moves the icon to that layout's spot. |
 | Sizes | Icon size, Badge size and Opacity apply live from both the options panel and Edit Mode, and the two stay in sync. |

@@ -9,6 +9,8 @@ local LEM = LibStub and LibStub("LibEditMode", true)
 local BADGE_HEIGHT = 16 -- At a 32px icon; scales with icon size and badge size.
 
 local button, icon, glow, glowAnim, halo, haloAnim, badgePulse
+local ping, pingAnim, popAnim
+local ALERT_ROUNDS = 3
 local badge, badgeText, badgeLeft, badgeMid, badgeRight
 local layoutKey = "default"
 local editing = false
@@ -169,7 +171,8 @@ function ns.ApplySettings()
 	if not button then return end
 	local size = ns.db.iconSize
 	button:SetSize(size, size)
-	glow:SetSize(size * 1.9, size * 1.9)
+	glow:SetSize(size * 2.4, size * 2.4)
+	ping:SetSize(size * 1.1, size * 1.1)
 	halo:SetSize(size * 2, size * 2)
 	-- The badge is designed for a 32px icon.
 	badge:SetScale(size / 32 * ns.db.badgeScale / 100)
@@ -178,11 +181,23 @@ function ns.ApplySettings()
 	ns.Refresh()
 end
 
+-- One round of the new-notification alert: a bright flash, a ripple out
+-- from the icon, and a quick bounce. It runs ALERT_ROUNDS times, much louder
+-- than the slow pulse that keeps going until the notifications are read.
+local function alertRound()
+	glowAnim:Stop()
+	pingAnim:Stop()
+	popAnim:Stop()
+	popAnim.loops = 0
+	glowAnim:Play()
+	pingAnim:Play()
+	popAnim:Play()
+end
+
 function ns.OnNewNotification()
 	if ns.db.flash and glowAnim then
-		glowAnim.loops = 0
-		glowAnim:Stop()
-		glowAnim:Play()
+		pingAnim.rounds = 1
+		alertRound()
 	end
 	ns.PlaySound(ns.db.sound)
 end
@@ -248,24 +263,55 @@ ns.OnLogin(function()
 	glow = button:CreateTexture(nil, "BACKGROUND")
 	glow:SetTexture(ns.MEDIA .. "Glow")
 	glow:SetBlendMode("ADD")
-	glow:SetVertexColor(1, 0.3, 0.3)
+	glow:SetVertexColor(1, 0.35, 0.35)
 	glow:SetPoint("CENTER", 0, 1)
 	glow:SetAlpha(0)
 
 	glowAnim = glow:CreateAnimationGroup()
 	local up = glowAnim:CreateAnimation("Alpha")
 	up:SetFromAlpha(0)
-	up:SetToAlpha(0.9)
-	up:SetDuration(0.25)
+	up:SetToAlpha(1)
+	up:SetDuration(0.15)
 	up:SetOrder(1)
 	local down = glowAnim:CreateAnimation("Alpha")
-	down:SetFromAlpha(0.9)
+	down:SetFromAlpha(1)
 	down:SetToAlpha(0)
-	down:SetDuration(0.5)
+	down:SetDuration(0.6)
 	down:SetOrder(2)
-	glowAnim:SetScript("OnFinished", function(self)
-		self.loops = (self.loops or 0) + 1
-		if self.loops < 3 then self:Play() end
+
+	-- A ring that ripples outward from the icon and fades.
+	ping = button:CreateTexture(nil, "BACKGROUND", nil, 1)
+	ping:SetTexture(ns.MEDIA .. "Ring")
+	-- Normal blending so it shows on bright scenery too.
+	ping:SetBlendMode("BLEND")
+	ping:SetVertexColor(1, 0.25, 0.27)
+	ping:SetPoint("CENTER", 0, 1)
+	ping:SetAlpha(0)
+
+	pingAnim = ping:CreateAnimationGroup()
+	local grow = pingAnim:CreateAnimation("Scale")
+	if grow.SetScaleFrom then
+		grow:SetScaleFrom(1, 1)
+		grow:SetScaleTo(2.6, 2.6)
+	else
+		grow:SetFromScale(1, 1)
+		grow:SetToScale(2.6, 2.6)
+	end
+	grow:SetOrigin("CENTER", 0, 0)
+	grow:SetDuration(0.75)
+	if grow.SetSmoothing then grow:SetSmoothing("OUT") end
+	local fade = pingAnim:CreateAnimation("Alpha")
+	fade:SetFromAlpha(1)
+	fade:SetToAlpha(0)
+	fade:SetDuration(0.75)
+	if fade.SetSmoothing then fade:SetSmoothing("IN") end
+	pingAnim:SetScript("OnFinished", function(self)
+		if (self.rounds or ALERT_ROUNDS) < ALERT_ROUNDS then
+			self.rounds = self.rounds + 1
+			alertRound()
+		else
+			popAnim:Stop()
+		end
 	end)
 
 	halo = button:CreateTexture(nil, "BACKGROUND", nil, -1)
@@ -287,6 +333,26 @@ ns.OnLogin(function()
 	icon = button:CreateTexture(nil, "ARTWORK")
 	icon:SetTexture(ns.MEDIA .. "Icon")
 	icon:SetAllPoints()
+
+	-- The bubble jumps out and back once per alert round.
+	popAnim = icon:CreateAnimationGroup()
+	popAnim:SetLooping("BOUNCE")
+	local pop = popAnim:CreateAnimation("Scale")
+	if pop.SetScaleFrom then
+		pop:SetScaleFrom(1, 1)
+		pop:SetScaleTo(1.3, 1.3)
+	else
+		pop:SetFromScale(1, 1)
+		pop:SetToScale(1.3, 1.3)
+	end
+	pop:SetOrigin("CENTER", 0, 0)
+	pop:SetDuration(0.15)
+	if pop.SetSmoothing then pop:SetSmoothing("OUT") end
+	-- Out, then back: stop after the second half so it ends at full size.
+	popAnim:SetScript("OnLoop", function(self)
+		self.loops = (self.loops or 0) + 1
+		if self.loops >= 2 then self:Stop() end
+	end)
 
 	createBadge()
 
@@ -335,6 +401,9 @@ ns.OnLogin(function()
 	end
 	applyPosition()
 	ns.button = button
-	ns.ui = { badge = badge, badgeText = badgeText, icon = icon, glowAnim = glowAnim, haloAnim = haloAnim }
+	ns.ui = {
+		badge = badge, badgeText = badgeText, icon = icon,
+		glowAnim = glowAnim, pingAnim = pingAnim, popAnim = popAnim, haloAnim = haloAnim,
+	}
 	ns.ApplySettings()
 end)

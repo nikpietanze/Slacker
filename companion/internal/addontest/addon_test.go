@@ -339,6 +339,37 @@ func TestPulseSetting(t *testing.T) {
 	run(t, L, `mock.advance(3); assert(not ns.ui.haloAnim:IsPlaying(), "stops once read")`)
 }
 
+// A new notification gets a loud alert (flash, ripple, bounce) a few times,
+// then only the slow pulse stays on until it's read.
+func TestNewNotificationAlert(t *testing.T) {
+	L, dir := newAddon(t)
+	must(t, bridge.WriteCode(dir, bridge.CodeForCount(0)))
+	run(t, L, `mock.advance(3)`)
+	must(t, bridge.WriteCode(dir, bridge.CodeForCount(2)))
+	run(t, L, `
+		mock.advance(3)
+		local ui = ns.ui
+		assert(ui.glowAnim._played == 1 and ui.pingAnim._played == 1 and ui.popAnim._played == 1, "first round")
+		local function finishRound()
+			ui.pingAnim:Stop()
+			ui.pingAnim:GetScript("OnFinished")(ui.pingAnim)
+		end
+		finishRound(); finishRound()
+		assert(ui.glowAnim._played == 3 and ui.pingAnim._played == 3 and ui.popAnim._played == 3, "three rounds")
+		finishRound()
+		assert(ui.pingAnim._played == 3, "then it stops")
+		assert(not ui.popAnim:IsPlaying(), "the bounce ends with the last round")
+		assert(ui.haloAnim:IsPlaying(), "the slow pulse keeps going until read")
+
+		-- The bounce goes out and back once per round.
+		ui.popAnim:Play()
+		ui.popAnim:GetScript("OnLoop")(ui.popAnim)
+		assert(ui.popAnim:IsPlaying(), "still on its way back")
+		ui.popAnim:GetScript("OnLoop")(ui.popAnim)
+		assert(not ui.popAnim:IsPlaying(), "stops at full size")
+	`)
+}
+
 // The client caches textures until an irregular cleanup frees unused ones
 // (7 to 76 s apart in a real 1.60.1 session). Reading the same file again
 // would stay stale until a cleanup; the slot ring must pick up every change

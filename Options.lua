@@ -106,7 +106,7 @@ ns.OnLoad(function()
 
 	header("New notifications")
 
-	checkbox("flash", "Flash", "Flash the icon briefly when a new Slack notification arrives.")
+	checkbox("flash", "Alert", "Flash, ripple and bounce the icon when a new Slack notification arrives.")
 	checkbox("pulse", "Keep pulsing until read",
 		"Keep the icon gently pulsing while you have unread Slack notifications.", apply)
 	dropdown("sound", "Sound", "none", soundChoices,
