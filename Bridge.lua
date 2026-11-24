@@ -174,7 +174,7 @@ end
 local function readBridge()
 	if waiting then return end
 	waiting = true
-	slot = slot % SLOTS + 1
+	slot = slot % (SLOTS - 1) + 1 -- EXPERIMENT: slot 128 is the test file
 	local name = ("s%03d"):format(slot)
 	tensProbe:SetTexture(BRIDGE .. name .. "t.tga")
 	onesProbe:SetTexture(BRIDGE .. name .. "o.tga")
@@ -182,7 +182,63 @@ local function readBridge()
 	probeFrame:SetScript("OnUpdate", onProbeUpdate)
 end
 
+---------------------------------------------------------------------------
+-- EXPERIMENT (not for release): does a different upper/lower case spelling
+-- of a path get its own cache entry? The companion side flips s128o between
+-- 2x2 and 2x4 every 5 s of wall-clock time. Each second we read it through the
+-- usual spelling and through a never-used spelling, and log both.
+---------------------------------------------------------------------------
+local EXP_SECONDS = 240
+local expTail = "bridge\\s128o.tga"
+local function variant(n)
+	local out, bit = {}, 0
+	for i = 1, #expTail do
+		local c = expTail:sub(i, i)
+		if c:match("%a") then
+			if math.floor(n / 2 ^ bit) % 2 == 1 then c = c:upper() end
+			bit = bit + 1
+		end
+		out[i] = c
+	end
+	return [[Interface\AddOns\]] .. ADDON_NAME .. "\\" .. table.concat(out)
+end
+local expA, expB = probeTexture(), probeTexture()
+local function expStart()
+	local log = {}
+	ns.db.cacheExp = log
+	local n, stop = 1, GetTime() + EXP_SECONDS -- n = 1 would be the usual spelling
+	local frame = CreateFrame("Frame")
+	local done = false
+	C_Timer.NewTicker(1, function()
+		if done then return end
+		if GetTime() > stop then done = true; log[#log + 1] = "done"; return end
+		n = n + 1
+		local t0 = time()
+		expA:SetTexture(BRIDGE .. "s128o.tga")
+		local aNow = expA:IsObjectLoaded() and "C" or "-"
+		local path = variant(n)
+		expB:SetTexture(path)
+		local bNow = expB:IsObjectLoaded() and "C" or "-"
+		local frames = 0
+		frame:SetScript("OnUpdate", function(self)
+			frames = frames + 1
+			local aw, ah = expA:GetSize()
+			local bw, bh = expB:GetSize()
+			if (aw > 0 and bw > 0) or frames > 60 then
+				self:SetScript("OnUpdate", nil)
+				log[#log + 1] = ("%d %d A%s%.0fx%.0f B%s%.0fx%.0f f%d %s"):format(
+					t0, math.floor(t0 / 5) % 2, aNow, aw, ah, bNow, bw, bh, frames, path:sub(-16))
+				expA:SetTexture(nil)
+				expB:SetTexture(nil)
+			end
+		end)
+	end)
+	ns.Print("cache experiment running for " .. EXP_SECONDS .. " s. /reload after it says done.")
+	C_Timer.After(EXP_SECONDS + 2, function() ns.Print("cache experiment done, please /reload") end)
+end
+
 ns.OnLogin(function()
+	C_Timer.After(3, expStart)
 	ref:SetTexture(ns.MEDIA .. "Icon")
 	C_Timer.NewTicker(math.max(0.5, ns.db.interval or 1), readBridge)
 	readBridge()
