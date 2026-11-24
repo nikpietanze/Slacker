@@ -51,7 +51,7 @@ Everything is under **Esc → Options → AddOns → Slacker** (or type `/slacke
 | Section | Settings |
 |---|---|
 | Icon | Lock position, tooltip, icon size (20 to 64 px), badge size, opacity, plus Move and Reset |
-| New notifications | Flash, sound (built-in or your SharedMedia sounds), plus Test |
+| New notifications | Alert animation, pulse until read, sound (built-in or your SharedMedia sounds), plus Test |
 | Companion app | Remind me when it isn't running, plus Get it (shows the download link) |
 
 The panel's **Defaults** button restores everything. To move the icon, click **Move** (or type `/slacker move`) to open Edit Mode, then drag it. Select it there to change its size and opacity. While it's unlocked, you can also just drag it.
@@ -125,7 +125,7 @@ If the badge only changes after `/reload`, see [Troubleshooting](docs/TROUBLESHO
 
 ## Good to know
 
-- **Live updates work around the game's texture cache.** The addon cycles through 128 small bridge files so it always reads a fresh one. See [How it works](docs/HOW-IT-WORKS.md#getting-past-the-texture-cache). If a future patch changes that, the badge still corrects on every `/reload`.
+- **Live updates work around the game's texture cache.** The addon never reads the same bridge file the same way twice in a session, and skips any copy the game has cached. See [How it works](docs/HOW-IT-WORKS.md#getting-past-the-texture-cache). If a future patch changes that, the badge still corrects on every `/reload`.
 - **Clicking the icon can't switch to Slack.** Addons can't launch or focus other programs.
 - **Terms of service.** The addon uses only the public addon API, and the companion only writes a file inside the addon's own folder, much as the WeakAuras Companion does. It doesn't read game memory or send input. Blizzard hasn't commented on this kind of file feed, so use it at your own discretion.
 

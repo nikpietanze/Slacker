@@ -93,18 +93,39 @@ end
 ---------------------------------------------------------------------------
 -- Poller.
 --
--- The client keeps a texture cached until a periodic cleanup frees unused
--- ones (irregularly, from seconds to over a minute apart on 1.60.1), so
--- loading the same file again usually returns the old size. A file that
--- hasn't been loaded since the last cleanup is always read from disk.
--- The companion writes the count into SLOTS identical slots and we read the
--- next one each second, so each slot rests for about two minutes between
--- reads: long enough that a cleanup has almost always freed it.
+-- The client caches every texture it loads, keyed by the file and the wrap
+-- and filter modes it was loaded with, and on a real client it can keep an
+-- unused entry for many minutes. Loading the same key again returns the old
+-- size even after the file changed. So no key is read twice: the companion
+-- writes the count into SLOTS identical slots, and we step through every
+-- (slot, wrap, wrap, filter) combination, about 13,800 of them, one per
+-- second, so nearly four hours pass before any repeats. The position is
+-- saved, so a /reload continues where it left off.
 --
--- The probes hold a slot only for the frame or two it takes to measure it,
--- so it's unused (and can be freed) the rest of the time. A value counts
--- only once two reads in a row agree, which skips a slot caught mid-write.
+-- A fresh load takes a frame or more, while a cached one reports loaded at
+-- once. Once we've seen a fresh load, a texture that is loaded the moment we
+-- set it is a cached (possibly stale) copy: we skip it and try the next key.
+--
+-- The probes hold a key only for the frame or two it takes to measure it. A
+-- value counts only once two reads in a row agree, which skips a slot caught
+-- mid-write.
 ---------------------------------------------------------------------------
+local WRAPS = { "CLAMP", "REPEAT", "MIRROR", "CLAMPTOBLACK", "CLAMPTOBLACKADDITIVE", "CLAMPTOWHITE" }
+local FILTERS = { "LINEAR", "TRILINEAR", "NEAREST" }
+local KEYS = SLOTS * #WRAPS * #WRAPS * #FILTERS
+local TRIES = 32 -- keys to try per tick when they turn out to be cached
+
+-- Key number (0-based) -> slot and load modes.
+local function keyAt(n)
+	local slot = n % SLOTS + 1
+	local mode = math.floor(n / SLOTS)
+	local h = mode % #WRAPS
+	local v = math.floor(mode / #WRAPS) % #WRAPS
+	local f = math.floor(mode / (#WRAPS * #WRAPS)) % #FILTERS
+	return slot, WRAPS[h + 1], WRAPS[v + 1], FILTERS[f + 1]
+end
+ns.BridgeKeyAt, ns.BRIDGE_KEYS = keyAt, KEYS
+
 local probeFrame = CreateFrame("Frame", nil, UIParent)
 probeFrame:SetSize(1, 1)
 probeFrame:SetPoint("BOTTOMLEFT")
@@ -119,19 +140,25 @@ local tensProbe, onesProbe, ref = probeTexture(), probeTexture(), probeTexture()
 local slot = 0
 local waiting, waitStart = false, 0
 local candidate -- last decoded value, applied once a second read agrees
+local sawFreshLoad = false -- true once a load has taken a frame (so cached ones are telling)
 local LOG_SIZE = 30
+ns.cachedSkips = 0
 
 -- Keeps the last few changes (with times) in the saved settings, so a bug
 -- report can show how quickly the client picked up each one.
 local function logChange(value)
 	local log = ns.db.bridgeLog or {}
 	ns.db.bridgeLog = log
-	log[#log + 1] = ("%s slot %d %s -> %s"):format(date("%H:%M:%S"), slot, ns.lastSize, tostring(value))
+	log[#log + 1] = ("%s key %d %s -> %s"):format(date("%H:%M:%S"), ns.db.bridgeKey or 0, ns.lastSize, tostring(value))
 	while #log > LOG_SIZE do table.remove(log, 1) end
 end
 
+local function isLoaded(t)
+	return not t.IsObjectLoaded or t:IsObjectLoaded()
+end
+
 local function loaded(t)
-	return (not t.IsObjectLoaded or t:IsObjectLoaded()) and (t:GetSize()) > 0
+	return isLoaded(t) and (t:GetSize()) > 0
 end
 
 local function finishProbe()
@@ -139,7 +166,7 @@ local function finishProbe()
 	probeFrame:SetScript("OnUpdate", nil)
 	local tw, th = tensProbe:GetSize()
 	local ow, oh = onesProbe:GetSize()
-	-- Let go right away so the cleanup can free them.
+	-- Let go right away.
 	tensProbe:SetTexture(nil)
 	onesProbe:SetTexture(nil)
 	local rw, rh = ref:GetSize()
@@ -173,13 +200,35 @@ end
 
 local function readBridge()
 	if waiting then return end
-	waiting = true
-	slot = slot % SLOTS + 1
-	local name = ("s%03d"):format(slot)
-	tensProbe:SetTexture(BRIDGE .. name .. "t.tga")
-	onesProbe:SetTexture(BRIDGE .. name .. "o.tga")
-	waitStart = GetTime()
-	probeFrame:SetScript("OnUpdate", onProbeUpdate)
+	for _ = 1, TRIES do
+		local n = (ns.db.bridgeKey or 0) % KEYS
+		ns.db.bridgeKey = n + 1
+		local wrapH, wrapV, filter
+		slot, wrapH, wrapV, filter = keyAt(n)
+		local name = ("s%03d"):format(slot)
+		tensProbe:SetTexture(BRIDGE .. name .. "t.tga", wrapH, wrapV, filter)
+		onesProbe:SetTexture(BRIDGE .. name .. "o.tga", wrapH, wrapV, filter)
+		local cached = isLoaded(tensProbe) or isLoaded(onesProbe)
+		if not cached then sawFreshLoad = true end
+		if cached and sawFreshLoad then
+			-- An old copy: skip it, it may hold a count from minutes ago.
+			tensProbe:SetTexture(nil)
+			onesProbe:SetTexture(nil)
+			ns.cachedSkips = ns.cachedSkips + 1
+		else
+			ns.lastFresh = GetTime()
+			waiting = true
+			waitStart = GetTime()
+			probeFrame:SetScript("OnUpdate", onProbeUpdate)
+			return
+		end
+	end
+	-- Every key we tried was cached. With ~13,800 keys this takes hours of
+	-- play; a /reload clears the cache.
+	if not ns.warnedStuck and ns.lastFresh and GetTime() - ns.lastFresh > 60 then
+		ns.warnedStuck = true
+		ns.Print("can't get a fresh reading from the companion right now. Type /reload to fix it.")
+	end
 end
 
 ns.OnLogin(function()

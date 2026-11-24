@@ -6,13 +6,12 @@
 // (Texture:GetSize() on an unsized texture). So the companion writes tiny
 // blank images whose sizes encode the count, and the addon loads them.
 //
-// The client caches a texture until a periodic cleanup frees unused ones
-// (every few seconds to a minute or more, observed on 1.60.1), so loading the
-// same file again usually returns the old size. A file that hasn't been
-// loaded since the last cleanup is always read fresh. The companion therefore
-// writes the count into a ring of Slots identical slots, and the addon reads
-// the next slot each second: by the time it returns to a slot, a cleanup has
-// almost certainly freed it.
+// The client caches each texture it loads, keyed by file and wrap/filter
+// modes, and may keep an unused copy for many minutes, so loading the same
+// file the same way again returns the old size. The companion therefore
+// writes the count into Slots identical slots, and the addon steps through
+// every slot and load-mode combination (about 13,800), so it never reads the
+// same key twice in a session. See docs/HOW-IT-WORKS.md.
 //
 // Each slot is two images, a tens digit and a ones digit, each holding a
 // digit 0..10 (10 is a marker):

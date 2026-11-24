@@ -24,6 +24,7 @@ Slacker's logic and the companion are covered by tests outside the game (`make t
 | Offline | With the companion stopped, the icon is dim and the tooltip says the companion app is needed. Clicking it shows a popup with the download link already selected. About 12 seconds after login, chat says so once. Turning off **Remind me when it isn't running** stops the chat line. |
 | Live updates | Run `slacker-companion demo`. The badge steps through 1, 2, 3, 7, 12, 42, 99, 99+ **without** `/reload`. With `/slacker debug` on, each read prints the new size. |
 | Real notification | Start the companion and minimize Slack. A DM from someone shows a badge within about two seconds. |
+| Idle | Stand still in a city for 15 minutes with no notifications. No badge appears. `/slacker status` shows cached copies skipped: 0. |
 | Clear | Focus Slack (Windows) or read the message (macOS, Linux). The badge goes away. |
 | Reload | `/reload` while the badge shows a count. It comes back with the same count, without a flash or sound. |
 | Clean exit | Stop the companion with Ctrl+C. The icon goes dim. |
@@ -34,7 +35,7 @@ Slacker's logic and the companion are covered by tests outside the game (`make t
 |---|---|
 | States | No notifications: muted gray bubble. Notifications: full-color bubble with a red badge. 10 and up stretches the badge into a pill. 100 and up shows `99+`. |
 | Tooltip | Hover shows `Slack: N notifications`, the time of the last one, and the hint line. Turning **Tooltip** off hides it. |
-| New notification | The icon flashes three times. With a sound chosen, it plays once. Neither happens at login or after `/reload`. |
+| New notification | Three rounds of a bright flash, a red ring rippling out and the bubble bouncing (about 2.5 seconds). Then only the slow pulse stays on until it's read. With a sound chosen, it plays once. None of this happens at login or after `/reload`. |
 | Drag | While unlocked, dragging moves the icon, and the position survives `/reload`. Locked, dragging does nothing. |
 | Edit Mode | **Move** opens Edit Mode with a selection box labeled "Slacker" and a sample badge. Dragging saves. Selecting it shows Icon size, Badge size, Opacity and More options. Switching Edit Mode layouts moves the icon to that layout's spot. |
 | Sizes | Icon size, Badge size and Opacity apply live from both the options panel and Edit Mode, and the two stay in sync. |
@@ -57,10 +58,11 @@ On WoW Forever 1.60.1 (build 71037, macOS, Nov 2026):
 
 - `Texture:GetSize()` on an unsized, single-anchor, alpha-0 texture returns the file's exact pixel size once loaded (2×2 read as `2.00x2.00`, the 64×64 icon as `64.00x64.00`).
 - 32-bit TGA loads. An 8-bit grayscale TGA did **not** (it measured 1×1).
-- Textures stay cached while in use, and unused ones are freed in a cleanup that ran 7 to 76 seconds apart. With one bridge file read every second, the badge picked up a change only after a cleanup, and got stuck when the file was held most of the time. Files left unused were read fresh after a cleanup. That's why the bridge is a ring of 128 slots.
+- Textures stay cached while in use, and unused ones are freed in a cleanup that ran 7 to 76 seconds apart while moving around. Idle in a city, an unused copy stayed cached for over 9 minutes, so reading a 128-slot ring every two minutes showed old counts (false alerts) until `/reload`.
+- The cache is keyed by file **and** wrap/filter modes: each of the 108 combinations reads fresh. Case changes, `.\` segments and new files don't help (the last two don't load at all). A fresh load takes a frame; a cached one reports `IsObjectLoaded()` at once.
 - LibEditMode works on Interface 16001 (PoisonSlot uses it too).
+- End to end on macOS 27 with real Slack DMs (Nov 2026): the companion followed Slack's Dock badge up and down (1, 2, 3, 2, 1), the in-game badge matched, and it cleared as soon as the message was read in Slack.
 
 ## Still to confirm
 
-- The slot ring in game: changes should show within about two seconds. After a test, `bridgeLog` in `SavedVariables/Slacker.lua` lists when each change arrived.
 - Windows and Linux (Wine) clients, which should behave the same.

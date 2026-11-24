@@ -5,7 +5,7 @@ A tiny icon that tells you when you have unread Slack notifications, without lea
 ## Features
 
 - **One small icon.** Muted when Slack has nothing for you, with a red badge and the count (up to 99+) when it does.
-- **Hard to miss.** A quick flash when a new notification arrives, then a gentle red pulse until you've read them. An optional sound plays too, built-in or from SharedMedia.
+- **Hard to miss.** A new notification flashes, ripples and bounces the icon, then a red pulse stays on until you've read it. An optional sound plays too, built-in or from SharedMedia.
 - **Fast.** New notifications show up within a couple of seconds, with no `/reload`.
 - **Hover for details.** "Slack: 3 notifications" and the time of the last one.
 - **Edit Mode support.** Move and resize it like any Blizzard frame, with a position saved for each Edit Mode layout.

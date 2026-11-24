@@ -19,7 +19,7 @@ local DEFAULTS = {
 	opacity = 100, -- Percent.
 	positions = {}, -- Icon position per Edit Mode layout, plus "default".
 	-- Alerts
-	flash = true, -- A quick flash when a new notification arrives.
+	flash = true, -- A loud alert (flash, ripple, bounce) when a new notification arrives.
 	pulse = true, -- Keep a gentle pulse going until they're read.
 	sound = "none", -- "none", "kit:<SOUNDKIT key>" or "lsm:<LibSharedMedia name>"
 	-- Companion
@@ -115,6 +115,8 @@ local function printStatus()
 	print(("  slack: %s"):format(ns.Describe(ns.count)))
 	print(("  bridge texture: %s, reference: %s (64x64 file), last read %s"):format(ns.lastSize or "not read yet",
 		ns.lastRef or "-", ns.lastRead and (math.floor(GetTime() - ns.lastRead + 0.5) .. "s ago") or "never"))
+	print(("  bridge key: %d of %d, cached copies skipped: %d"):format(ns.db.bridgeKey or 0, ns.BRIDGE_KEYS or 0,
+		ns.cachedSkips or 0))
 	local w, h = GetPhysicalScreenSize and GetPhysicalScreenSize()
 	print(("  screen: %s, ui scale: %.2f"):format(w and (w .. "x" .. h) or "?", UIParent:GetEffectiveScale()))
 	print(("  edit mode: %s, layout: %s"):format(ns.EditModeAvailable() and "yes" or "no", ns.LayoutKey()))

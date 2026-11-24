@@ -33,12 +33,16 @@ function mock.sweep()
 	if not mock.cache then return end
 	local used = {}
 	for _, f in ipairs(mock.textures) do
-		if f._file then used[f._file] = true end
+		if f._key then used[f._key] = true end
 	end
-	for path in pairs(mock.cache) do
-		if not used[path] then mock.cache[path] = nil end
+	for key in pairs(mock.cache) do
+		if not used[key] then mock.cache[key] = nil end
 	end
 end
+
+-- With mock.cache on, a texture not in the cache takes a frame to load, like
+-- the client; a cached one is loaded at once.
+mock.pending = {}
 
 -- Advance the fake clock in 1/30 s frames, firing timers and OnUpdate.
 function mock.advance(seconds)
@@ -59,6 +63,8 @@ function mock.advance(seconds)
 			mock.sweepIndex = mock.sweepIndex % #mock.sweepGaps + 1
 			mock.sweepAt = clock + mock.sweepGaps[mock.sweepIndex]
 		end
+		for _, t in ipairs(mock.pending) do t._loaded = true end
+		mock.pending = {}
 		for _, f in ipairs(frames) do
 			local s = f._scripts.OnUpdate
 			if s then s(f, 1 / 30) end
@@ -95,10 +101,10 @@ mock.methods = {
 				if mock.cache then
 					-- Like the client: a loaded file stays cached until a
 					-- cleanup runs while nothing uses it.
-					local hit = mock.cache[self._file]
+					local hit = mock.cache[self._key]
 					if not hit then
 						hit = { tga_size(mock.root, self._file) }
-						mock.cache[self._file] = hit
+						mock.cache[self._key] = hit
 					end
 					w, h = hit[1], hit[2]
 				else
@@ -135,8 +141,20 @@ mock.methods = {
 	Hide = function(self) self._shown = false end,
 	SetShown = function(self, v) self._shown = not not v end,
 	IsShown = function(self) return self._shown end,
-	SetTexture = function(self, f) self._file = f end,
-	IsObjectLoaded = function(self) return true end,
+	SetTexture = function(self, f, wrapH, wrapV, filter)
+		self._file, self._key, self._loaded = f, nil, true
+		if not f then return true end
+		-- The client caches per file and load modes (the defaults are CLAMP,
+		-- CLAMP, LINEAR); paths are case-insensitive.
+		self._key = ("%s|%s|%s|%s"):format(f:lower(), wrapH or "CLAMP", wrapV or "CLAMP", filter or "LINEAR")
+		if mock.cache and not mock.cache[self._key] then
+			mock.cache[self._key] = { tga_size(mock.root, f) }
+			self._loaded = false
+			mock.pending[#mock.pending + 1] = self
+		end
+		return true
+	end,
+	IsObjectLoaded = function(self) return self._loaded ~= false end,
 	SetDesaturated = function(self, v) self._desat = v end,
 	SetText = function(self, t) self._text = t end,
 	GetText = function(self) return self._text end,

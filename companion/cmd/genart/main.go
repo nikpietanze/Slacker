@@ -244,6 +244,13 @@ func glow(x, y float64) rgba {
 	return rgba{1, 1, 1, math.Pow(math.Max(0, 1-r), 2)}
 }
 
+// ring is a soft circle outline for the ripples on a new notification.
+func ring(x, y float64) rgba {
+	r := math.Hypot(x-32, y-32) / 32
+	d := (r - 0.8) / 0.11
+	return rgba{1, 1, 1, math.Exp(-d * d)}
+}
+
 // render draws an n x n image of the 64-unit design.
 func render(n int, shade func(x, y float64) rgba) []byte {
 	out := make([]byte, n*n*4)
@@ -420,6 +427,7 @@ func main() {
 	write(filepath.Join(dir, "Media", "Icon.tga"), bridge.RGBATGA(size, size, render(size, icon(st))))
 	write(filepath.Join(dir, "Media", "Badge.tga"), bridge.RGBATGA(size, size, render(size, badge)))
 	write(filepath.Join(dir, "Media", "Glow.tga"), bridge.RGBATGA(size, size, render(size, glow)))
+	write(filepath.Join(dir, "Media", "Ring.tga"), bridge.RGBATGA(size, size, render(size, ring)))
 	// Every bridge slot ships as "companion offline".
 	if err := bridge.WriteCode(dir, bridge.CodeOffline); err != nil {
 		panic(err)
