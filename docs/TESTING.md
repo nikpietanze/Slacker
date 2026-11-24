@@ -59,8 +59,8 @@ On WoW Forever 1.60.1 (build 71037, macOS, Nov 2026):
 - 32-bit TGA loads. An 8-bit grayscale TGA did **not** (it measured 1×1).
 - Textures stay cached while in use, and unused ones are freed in a cleanup that ran 7 to 76 seconds apart. With one bridge file read every second, the badge picked up a change only after a cleanup, and got stuck when the file was held most of the time. Files left unused were read fresh after a cleanup. That's why the bridge is a ring of 128 slots.
 - LibEditMode works on Interface 16001 (PoisonSlot uses it too).
+- End to end on macOS 27 with real Slack DMs (Nov 2026): the companion followed Slack's Dock badge up and down (1, 2, 3, 2, 1), the in-game badge matched, and it cleared as soon as the message was read in Slack.
 
 ## Still to confirm
 
-- The slot ring in game: changes should show within about two seconds. After a test, `bridgeLog` in `SavedVariables/Slacker.lua` lists when each change arrived.
 - Windows and Linux (Wine) clients, which should behave the same.
